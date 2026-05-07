@@ -6,592 +6,134 @@
 <title>ROBOT WARS: Arena of Destruction</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
-<script>
-// PeerJS loaded dynamically
-</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
-
   :root {
-    --metal: #8a8a9a;
-    --steel: #c0c8d0;
-    --danger: #ff2020;
-    --warn: #ff8800;
-    --safe: #00ff88;
-    --ui-bg: rgba(5,8,15,0.92);
-    --border: #1a3050;
-    --glow: #00aaff;
-    --glow2: #ff4400;
+    --glow:#00aaff; --glow2:#ff4400; --safe:#00ff88; --warn:#ff8800; --danger:#ff2020;
+    --ui-bg:rgba(5,8,15,0.92); --border:#1a3050;
   }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#000;font-family:'Share Tech Mono',monospace;color:#ccc;overflow:hidden;user-select:none;}
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+  #loadScreen{position:fixed;inset:0;background:radial-gradient(ellipse at center,#0a0f1a 0%,#000 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+  .logo{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,5rem);font-weight:900;letter-spacing:.15em;color:#fff;text-shadow:0 0 30px var(--glow),0 0 60px var(--glow);animation:pulse 2s ease-in-out infinite;}
+  .sub-logo{font-family:'Orbitron',sans-serif;font-size:clamp(.8rem,2vw,1.4rem);color:var(--glow2);letter-spacing:.3em;margin-top:8px;text-shadow:0 0 15px var(--glow2);}
+  @keyframes pulse{0%,100%{text-shadow:0 0 30px var(--glow),0 0 60px var(--glow);}50%{text-shadow:0 0 50px var(--glow),0 0 100px var(--glow),0 0 120px var(--glow2);}}
+  #loadBar{margin-top:40px;width:min(400px,80vw);height:4px;background:#111;border:1px solid #333;}
+  #loadBarFill{height:100%;background:linear-gradient(90deg,var(--glow),var(--glow2));width:0%;box-shadow:0 0 8px var(--glow);transition:width .3s;}
+  #loadMsg{margin-top:10px;font-size:.75rem;color:#555;letter-spacing:.1em;}
 
-  body {
-    background:#000;
-    font-family:'Share Tech Mono', monospace;
-    color:#ccc;
-    overflow:hidden;
-    user-select:none;
-  }
+  #menuScreen{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 40%,#0d1a2e 0%,#000 70%);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
+  .menu-btn{background:transparent;border:1px solid var(--glow);color:var(--glow);font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.2em;padding:14px 40px;margin:8px;cursor:pointer;width:280px;text-align:center;position:relative;overflow:hidden;transition:all .2s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);}
+  .menu-btn::before{content:'';position:absolute;inset:0;background:var(--glow);transform:translateX(-100%);transition:transform .2s;opacity:.15;}
+  .menu-btn:hover::before{transform:translateX(0);}
+  .menu-btn:hover{color:#fff;text-shadow:0 0 10px var(--glow);box-shadow:0 0 20px var(--glow);}
+  .menu-btn.danger{border-color:var(--glow2);color:var(--glow2);}
+  .menu-btn.danger::before{background:var(--glow2);}
+  .menu-btn.danger:hover{text-shadow:0 0 10px var(--glow2);box-shadow:0 0 20px var(--glow2);}
+  .menu-btn.back{border-color:#555;color:#888;}
+  .menu-btn.back:hover{border-color:#aaa;color:#ccc;}
 
-  #loadScreen {
-    position:fixed; inset:0;
-    background:radial-gradient(ellipse at center, #0a0f1a 0%, #000 70%);
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    z-index:9999;
-  }
-  #loadScreen h1 {
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(2rem,6vw,5rem);
-    font-weight:900;
-    letter-spacing:0.15em;
-    color:#fff;
-    text-shadow: 0 0 30px var(--glow), 0 0 60px var(--glow), 0 0 2px #fff;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  #loadScreen h2 {
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(0.8rem,2vw,1.5rem);
-    color:var(--glow2);
-    letter-spacing:0.3em;
-    margin-top:8px;
-    text-shadow:0 0 15px var(--glow2);
-  }
-  #loadBar {
-    margin-top:40px;
-    width:min(400px,80vw);
-    height:4px;
-    background:#111;
-    border:1px solid #333;
-  }
-  #loadBarFill {
-    height:100%;
-    background:linear-gradient(90deg,var(--glow),var(--glow2));
-    width:0%;
-    transition:width 0.3s;
-    box-shadow:0 0 8px var(--glow);
-  }
-  #loadMsg {
-    margin-top:10px;
-    font-size:0.75rem;
-    color:#555;
-    letter-spacing:0.1em;
-  }
+  /* WORKSHOP */
+  #workshopScreen{position:fixed;inset:0;background:#06090f;display:none;z-index:200;flex-direction:column;}
+  #workshop-header{display:flex;align-items:center;padding:12px 20px;background:rgba(0,0,0,.6);border-bottom:1px solid #1a2a40;gap:16px;flex-shrink:0;}
+  #workshop-header h2{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;color:var(--glow);letter-spacing:.2em;flex:1;}
+  #ws-identity{padding:8px 20px;background:rgba(0,0,0,.4);border-bottom:1px solid #111;flex-shrink:0;}
+  .prop-inp{background:#0d1520;border:1px solid #1a2a40;color:#ccc;padding:4px 8px;font-family:'Share Tech Mono',monospace;font-size:.75rem;outline:none;}
+  .prop-inp:focus{border-color:var(--glow);}
+  .color-swatches{display:flex;flex-wrap:wrap;gap:3px;}
+  .swatch{width:18px;height:18px;border:2px solid transparent;cursor:pointer;transition:border-color .15s;}
+  .swatch:hover,.swatch.active{border-color:#fff;}
+  #ws-columns{display:flex;flex:1;overflow:hidden;gap:1px;background:#0d1018;}
+  .ws-col{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #0d1520;}
+  .ws-col:last-child{border-right:none;}
+  .ws-col-header{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.2em;color:var(--glow);padding:10px 12px 8px;background:rgba(0,10,25,.8);border-bottom:1px solid #1a2a40;flex-shrink:0;}
+  .ws-col-list{overflow-y:auto;flex:1;padding:4px;}
+  .ws-col-list::-webkit-scrollbar{width:4px;}
+  .ws-col-list::-webkit-scrollbar-thumb{background:#1a3050;}
+  .ws-part-row{display:flex;align-items:center;gap:8px;padding:9px 10px;margin:2px 0;border:1px solid transparent;cursor:pointer;transition:all .12s;position:relative;}
+  .ws-part-row:hover{border-color:#1a3050;background:rgba(0,170,255,.06);}
+  .ws-part-row.active{border-color:var(--glow);background:rgba(0,170,255,.12);}
+  .ws-part-row.active::before{content:'▶';position:absolute;left:-2px;color:var(--glow);font-size:.6rem;}
+  .ws-part-icon{font-size:1.4rem;width:28px;text-align:center;flex-shrink:0;}
+  .ws-part-info{flex:1;min-width:0;}
+  .ws-part-name{font-size:.72rem;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ws-part-sub{font-size:.6rem;color:#556;margin-top:1px;}
+  .ws-part-stat{font-size:.6rem;color:#aaa;margin-top:2px;}
+  .ws-part-kg{font-size:.6rem;color:#445;text-align:right;flex-shrink:0;}
+  #ws-statsbar{display:flex;align-items:center;padding:0;background:rgba(0,0,0,.7);border-top:1px solid #1a2a40;flex-shrink:0;height:44px;}
+  .ws-stat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid #111;height:100%;padding:0 6px;}
+  .ws-stat:last-child{border-right:none;}
+  .ws-stat-lbl{font-size:.5rem;color:#445;letter-spacing:.15em;}
+  .ws-stat span:last-child{font-size:.85rem;color:#ccc;font-family:'Orbitron',sans-serif;}
+  #ws-statmsg{font-size:.65rem;color:var(--warn);padding:0 12px;min-width:140px;text-align:center;letter-spacing:.1em;}
+  .ws-btn{background:transparent;border:1px solid var(--glow);color:var(--glow);font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.15em;padding:8px 14px;cursor:pointer;transition:all .2s;clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);}
+  .ws-btn:hover{background:rgba(0,170,255,.12);box-shadow:0 0 12px var(--glow);color:#fff;}
+  .ws-btn.back{border-color:#555;color:#888;}
+  .ws-btn.back:hover{border-color:#aaa;color:#ccc;}
+  .ws-btn.ready{border-color:var(--safe);color:var(--safe);}
+  .ws-btn.ready:hover{background:rgba(0,255,136,.1);box-shadow:0 0 12px var(--safe);}
 
-  @keyframes pulse {
-    0%,100%{text-shadow:0 0 30px var(--glow),0 0 60px var(--glow),0 0 2px #fff;}
-    50%{text-shadow:0 0 50px var(--glow),0 0 100px var(--glow),0 0 4px #fff,0 0 120px var(--glow2);}
-  }
+  /* HUD */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:50;display:none;}
+  #gameCanvas{position:fixed;inset:0;display:none;}
+  .hud-bar{position:absolute;top:20px;display:flex;flex-direction:column;gap:6px;}
+  #hud-left{left:20px;}
+  #hud-right{right:20px;align-items:flex-end;}
+  .hud-name{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.15em;color:#fff;text-shadow:0 0 8px var(--glow);}
+  .hud-hp-wrap{width:220px;height:16px;background:rgba(0,0,0,.7);border:1px solid #333;position:relative;overflow:hidden;}
+  .hud-hp-fill{height:100%;background:linear-gradient(90deg,#00cc44,#00ff88);transition:width .15s,background .3s;}
+  .hud-hp-fill.warn{background:linear-gradient(90deg,#cc7700,var(--warn));}
+  .hud-hp-fill.critical{background:linear-gradient(90deg,#880000,var(--danger));animation:flicker .4s infinite;}
+  @keyframes flicker{50%{opacity:.6}}
+  .hud-stat-row{display:flex;gap:12px;font-size:.72rem;color:#888;}
+  .hud-stat-row span{color:#aaa;}
+  #hud-center{position:absolute;top:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;}
+  #hud-timer{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;color:#fff;text-shadow:0 0 10px var(--glow);letter-spacing:.1em;}
+  #hud-round{font-family:'Orbitron',sans-serif;font-size:.75rem;color:#888;letter-spacing:.3em;}
+  #hud-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron',sans-serif;font-size:clamp(1.5rem,4vw,3rem);font-weight:900;color:#fff;text-shadow:0 0 30px var(--danger),0 0 60px var(--danger);pointer-events:none;text-align:center;opacity:0;transition:opacity .3s;}
+  #hud-msg.show{opacity:1;}
+  #controls-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:.65rem;color:#555;letter-spacing:.1em;}
+  .ctrl-key{background:rgba(255,255,255,.08);border:1px solid #333;padding:2px 7px;color:#aaa;}
+  #dmgFlash{position:fixed;inset:0;pointer-events:none;z-index:60;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(255,0,0,.3) 100%);transition:opacity .05s;}
+  #dmgFlash.show{opacity:1;}
+  #minimap{position:fixed;bottom:20px;right:20px;width:120px;height:120px;border:1px solid #1a2a40;background:rgba(0,0,0,.7);overflow:hidden;pointer-events:none;}
+  #sparksCanvas{position:fixed;inset:0;pointer-events:none;z-index:55;}
+  #resultScreen{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:150;}
+  #resultScreen h1{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:900;letter-spacing:.1em;color:#fff;text-shadow:0 0 40px var(--glow);margin-bottom:10px;}
+  #resultSub{font-size:1rem;color:#888;letter-spacing:.3em;margin-bottom:40px;}
 
-  /* ===== MENU ===== */
-  #menuScreen {
-    position:fixed; inset:0;
-    background:radial-gradient(ellipse at 50% 40%, #0d1a2e 0%, #000 70%);
-    display:none; flex-direction:column;
-    align-items:center; justify-content:center;
-    z-index:100;
-  }
-  .menu-logo {
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(2.5rem,7vw,6rem);
-    font-weight:900;
-    color:#fff;
-    text-align:center;
-    text-shadow:0 0 40px var(--glow),0 0 80px var(--glow);
-    line-height:1;
-  }
-  .menu-sub {
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(0.7rem,1.5vw,1.1rem);
-    color:var(--glow2);
-    letter-spacing:0.5em;
-    margin:10px 0 50px;
-    text-shadow:0 0 15px var(--glow2);
-  }
-  .menu-btn {
-    background:transparent;
-    border:1px solid var(--glow);
-    color:var(--glow);
-    font-family:'Orbitron',sans-serif;
-    font-size:1rem;
-    font-weight:700;
-    letter-spacing:0.2em;
-    padding:14px 40px;
-    margin:8px;
-    cursor:pointer;
-    width:280px;
-    text-align:center;
-    position:relative;
-    overflow:hidden;
-    transition:all 0.2s;
-    clip-path:polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  }
-  .menu-btn::before {
-    content:'';
-    position:absolute; inset:0;
-    background:var(--glow);
-    transform:translateX(-100%);
-    transition:transform 0.2s;
-    opacity:0.15;
-  }
-  .menu-btn:hover::before { transform:translateX(0); }
-  .menu-btn:hover {
-    color:#fff;
-    text-shadow:0 0 10px var(--glow);
-    box-shadow:0 0 20px var(--glow),inset 0 0 20px rgba(0,170,255,0.1);
-  }
-  .menu-btn.danger { border-color:var(--glow2); color:var(--glow2); }
-  .menu-btn.danger::before { background:var(--glow2); }
-  .menu-btn.danger:hover { text-shadow:0 0 10px var(--glow2); box-shadow:0 0 20px var(--glow2); }
+  /* Weapon cooldown bars */
+  .weap-hud{display:flex;gap:8px;margin-top:4px;}
+  .weap-slot{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .weap-icon-sm{font-size:1rem;}
+  .weap-cd{width:36px;height:3px;background:#222;border:1px solid #333;overflow:hidden;position:relative;}
+  .weap-cd-fill{height:100%;background:var(--glow2);position:absolute;left:0;top:0;transition:width .1s;}
+  .weap-key{font-size:.55rem;color:#444;}
 
-  /* ===== HUD ===== */
-  #hud {
-    position:fixed; inset:0;
-    pointer-events:none;
-    z-index:50;
-    display:none;
-  }
-  #gameCanvas {
-    position:fixed; inset:0;
-    display:none;
-  }
-
-  .hud-bar {
-    position:absolute;
-    top:20px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    pointer-events:none;
-  }
-  #hud-left { left:20px; }
-  #hud-right { right:20px; align-items:flex-end; }
-
-  .hud-name {
-    font-family:'Orbitron',sans-serif;
-    font-size:0.9rem;
-    font-weight:700;
-    letter-spacing:0.15em;
-    color:#fff;
-    text-shadow:0 0 8px var(--glow);
-  }
-  .hud-hp-wrap {
-    width:220px;
-    height:16px;
-    background:rgba(0,0,0,0.7);
-    border:1px solid #333;
-    position:relative;
-    overflow:hidden;
-  }
-  .hud-hp-fill {
-    height:100%;
-    background:linear-gradient(90deg,#00cc44,#00ff88);
-    transition:width 0.15s, background 0.3s;
-    position:relative;
-  }
-  .hud-hp-fill.warn { background:linear-gradient(90deg,#cc7700,var(--warn)); }
-  .hud-hp-fill.critical { background:linear-gradient(90deg,#880000,var(--danger)); animation:flicker 0.4s infinite; }
-  @keyframes flicker { 50%{opacity:0.6} }
-
-  .hud-stat-row {
-    display:flex; gap:12px;
-    font-size:0.72rem; color:#888;
-  }
-  .hud-stat-row span { color:#aaa; }
-
-  #hud-center {
-    position:absolute;
-    top:20px;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:6px;
-  }
-  #hud-timer {
-    font-family:'Orbitron',sans-serif;
-    font-size:1.6rem;
-    font-weight:900;
-    color:#fff;
-    text-shadow:0 0 10px var(--glow);
-    letter-spacing:0.1em;
-  }
-  #hud-round {
-    font-family:'Orbitron',sans-serif;
-    font-size:0.75rem;
-    color:#888;
-    letter-spacing:0.3em;
-  }
-
-  #hud-msg {
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(1.5rem,4vw,3rem);
-    font-weight:900;
-    color:#fff;
-    text-shadow:0 0 30px var(--danger),0 0 60px var(--danger);
-    pointer-events:none;
-    text-align:center;
-    opacity:0;
-    transition:opacity 0.3s;
-  }
-  #hud-msg.show { opacity:1; }
-
-  /* Controls hint */
-  #controls-hint {
-    position:absolute;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    display:flex; gap:16px;
-    font-size:0.65rem; color:#555;
-    letter-spacing:0.1em;
-  }
-  .ctrl-key {
-    background:rgba(255,255,255,0.08);
-    border:1px solid #333;
-    padding:2px 7px;
-    color:#aaa;
-  }
-
-  /* ===== WORKSHOP ===== */
-  #workshopScreen {
-    position:fixed; inset:0;
-    background:#06090f;
-    display:none;
-    z-index:200;
-    flex-direction:column;
-  }
-  #workshop-header {
-    display:flex;
-    align-items:center;
-    padding:12px 20px;
-    background:rgba(0,0,0,0.6);
-    border-bottom:1px solid #1a2a40;
-    gap:16px;
-    flex-shrink:0;
-  }
-  #workshop-header h2 {
-    font-family:'Orbitron',sans-serif;
-    font-size:1.1rem;
-    font-weight:700;
-    color:var(--glow);
-    letter-spacing:0.2em;
-    flex:1;
-  }
-  #ws-identity {
-    padding:8px 20px;
-    background:rgba(0,0,0,0.4);
-    border-bottom:1px solid #111;
-    flex-shrink:0;
-  }
-  .prop-inp {
-    background:#0d1520;
-    border:1px solid #1a2a40;
-    color:#ccc;
-    padding:4px 8px;
-    font-family:'Share Tech Mono',monospace;
-    font-size:0.75rem;
-    outline:none;
-  }
-  .prop-inp:focus { border-color:var(--glow); }
-  .color-swatches { display:flex; flex-wrap:wrap; gap:3px; }
-  .swatch { width:18px; height:18px; border:2px solid transparent; cursor:pointer; transition:border-color 0.15s; }
-  .swatch:hover,.swatch.active { border-color:#fff; }
-
-  /* Four columns */
-  #ws-columns {
-    display:flex;
-    flex:1;
-    overflow:hidden;
-    gap:1px;
-    background:#0d1018;
-  }
-  .ws-col {
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-    border-right:1px solid #0d1520;
-  }
-  .ws-col:last-child { border-right:none; }
-  .ws-col-header {
-    font-family:'Orbitron',sans-serif;
-    font-size:0.7rem;
-    font-weight:700;
-    letter-spacing:0.2em;
-    color:var(--glow);
-    padding:10px 12px 8px;
-    background:rgba(0,10,25,0.8);
-    border-bottom:1px solid #1a2a40;
-    flex-shrink:0;
-  }
-  .ws-col-list {
-    overflow-y:auto;
-    flex:1;
-    padding:4px;
-  }
-  .ws-col-list::-webkit-scrollbar { width:4px; }
-  .ws-col-list::-webkit-scrollbar-thumb { background:#1a3050; }
-
-  .ws-part-row {
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:9px 10px;
-    margin:2px 0;
-    border:1px solid transparent;
-    cursor:pointer;
-    transition:all 0.12s;
-    position:relative;
-  }
-  .ws-part-row:hover { border-color:#1a3050; background:rgba(0,170,255,0.06); }
-  .ws-part-row.active {
-    border-color:var(--glow);
-    background:rgba(0,170,255,0.12);
-  }
-  .ws-part-row.active::before {
-    content:'▶';
-    position:absolute;
-    left:-2px;
-    color:var(--glow);
-    font-size:0.6rem;
-  }
-  .ws-part-icon { font-size:1.4rem; width:28px; text-align:center; flex-shrink:0; }
-  .ws-part-info { flex:1; min-width:0; }
-  .ws-part-name { font-size:0.72rem; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .ws-part-sub  { font-size:0.6rem; color:#556; margin-top:1px; }
-  .ws-part-stat { font-size:0.6rem; color:#aaa; margin-top:2px; }
-  .ws-part-kg   { font-size:0.6rem; color:#445; text-align:right; flex-shrink:0; }
-
-  /* Stats bar */
-  #ws-statsbar {
-    display:flex;
-    align-items:center;
-    gap:0;
-    padding:0;
-    background:rgba(0,0,0,0.7);
-    border-top:1px solid #1a2a40;
-    flex-shrink:0;
-    height:44px;
-  }
-  .ws-stat {
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    border-right:1px solid #111;
-    height:100%;
-    padding:0 6px;
-  }
-  .ws-stat:last-child { border-right:none; }
-  .ws-stat-lbl { font-size:0.5rem; color:#445; letter-spacing:0.15em; }
-  .ws-stat span:last-child { font-size:0.85rem; color:#ccc; font-family:'Orbitron',sans-serif; }
-  #ws-statmsg {
-    font-size:0.65rem;
-    color:var(--warn);
-    padding:0 12px;
-    min-width:140px;
-    text-align:center;
-    letter-spacing:0.1em;
-  }
-
-  .ws-btn {
-    background:transparent;
-    border:1px solid var(--glow);
-    color:var(--glow);
-    font-family:'Orbitron',sans-serif;
-    font-size:0.7rem;
-    font-weight:700;
-    letter-spacing:0.15em;
-    padding:8px 14px;
-    cursor:pointer;
-    transition:all 0.2s;
-    clip-path:polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%);
-  }
-  .ws-btn:hover { background:rgba(0,170,255,0.12); box-shadow:0 0 12px var(--glow); color:#fff; }
-  .ws-btn.back { border-color:#555; color:#888; }
-  .ws-btn.back:hover { border-color:#aaa; color:#ccc; }
-  .ws-btn.ready { border-color:var(--safe); color:var(--safe); }
-  .ws-btn.ready:hover { background:rgba(0,255,136,0.1); box-shadow:0 0 12px var(--safe); }
-
-  /* ===== Online modal ===== */
-  #onlineModal {
-    position:fixed; inset:0;
-    background:rgba(0,0,0,0.85);
-    display:none; align-items:center; justify-content:center;
-    z-index:300;
-  }
-  #onlineBox {
-    background:#0a0e16;
-    border:1px solid var(--glow);
-    padding:30px 40px;
-    min-width:340px;
-    box-shadow:0 0 40px rgba(0,170,255,0.2);
-  }
-  #onlineBox h3 {
-    font-family:'Orbitron',sans-serif;
-    font-size:1rem;
-    color:var(--glow);
-    letter-spacing:0.2em;
-    margin-bottom:20px;
-    text-align:center;
-  }
-  .ol-section { margin:16px 0; }
-  .ol-label { font-size:0.7rem; color:#556; letter-spacing:0.1em; margin-bottom:6px; }
-  .ol-inp {
-    width:100%;
-    background:#060a12;
-    border:1px solid #1a2a40;
-    color:#ccc;
-    padding:8px 12px;
-    font-family:'Share Tech Mono',monospace;
-    font-size:0.85rem;
-    outline:none;
-    letter-spacing:0.1em;
-  }
-  .ol-inp:focus { border-color:var(--glow); }
-  #myPeerId {
-    background:#060a12;
-    border:1px solid #1a2a40;
-    padding:8px 12px;
-    font-size:0.8rem;
-    color:var(--glow);
-    letter-spacing:0.1em;
-    word-break:break-all;
-    cursor:pointer;
-    position:relative;
-  }
-  #myPeerId:hover::after {
-    content:'COPY';
-    position:absolute; right:8px; top:50%; transform:translateY(-50%);
-    font-size:0.6rem; color:#555;
-  }
-  #ol-status { font-size:0.7rem; color:#888; margin-top:8px; text-align:center; min-height:16px; }
-
-  /* ===== Damage flash ===== */
-  #dmgFlash {
-    position:fixed; inset:0;
-    pointer-events:none;
-    z-index:60;
-    opacity:0;
-    background:radial-gradient(ellipse at center, transparent 40%, rgba(255,0,0,0.3) 100%);
-    transition:opacity 0.05s;
-  }
-  #dmgFlash.show { opacity:1; }
-
-  /* ===== Result screen ===== */
-  #resultScreen {
-    position:fixed; inset:0;
-    background:rgba(0,0,0,0.85);
-    display:none; flex-direction:column;
-    align-items:center; justify-content:center;
-    z-index:150;
-  }
-  #resultScreen h1 {
-    font-family:'Orbitron',sans-serif;
-    font-size:clamp(2rem,6vw,4.5rem);
-    font-weight:900;
-    letter-spacing:0.1em;
-    color:#fff;
-    text-shadow:0 0 40px var(--glow);
-    margin-bottom:10px;
-  }
-  #resultSub {
-    font-size:1rem;
-    color:#888;
-    letter-spacing:0.3em;
-    margin-bottom:40px;
-  }
-
-  /* Minimap */
-  #minimap {
-    position:fixed;
-    bottom:20px; right:20px;
-    width:120px; height:120px;
-    border:1px solid #1a2a40;
-    background:rgba(0,0,0,0.7);
-    overflow:hidden;
-    pointer-events:none;
-  }
-  #minimapCanvas { width:100%; height:100%; }
-
-  /* Sparks canvas overlay */
-  #sparksCanvas {
-    position:fixed; inset:0;
-    pointer-events:none;
-    z-index:55;
-  }
-
-  .tab-row {
-    display:flex;
-    border-bottom:1px solid #1a2a40;
-  }
-  .tab-btn {
-    padding:8px 14px;
-    font-size:0.65rem;
-    color:#556;
-    cursor:pointer;
-    border-bottom:2px solid transparent;
-    letter-spacing:0.1em;
-    transition:all 0.15s;
-  }
-  .tab-btn:hover { color:#aaa; }
-  .tab-btn.active { color:var(--glow); border-bottom-color:var(--glow); }
-
-  .weapon-indicator {
-    position:absolute;
-    bottom:60px; left:50%;
-    transform:translateX(-50%);
-    display:flex; gap:10px;
-  }
-  .weap-slot {
-    display:flex; flex-direction:column; align-items:center; gap:3px;
-  }
-  .weap-icon { font-size:1.3rem; }
-  .weap-cd {
-    width:40px; height:3px;
-    background:#222;
-    border:1px solid #333;
-    position:relative;
-    overflow:hidden;
-  }
-  .weap-cd-fill {
-    height:100%;
-    background:var(--glow2);
-    position:absolute; left:0; top:0;
-    transition:width 0.1s;
-  }
-  .weap-key { font-size:0.6rem; color:#556; }
+  /* Damage number popups */
+  .dmg-popup{position:fixed;font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;pointer-events:none;z-index:70;animation:dmgFly 1.2s ease-out forwards;}
+  @keyframes dmgFly{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-60px) scale(.7);}}
 </style>
 </head>
 <body>
 
-<!-- Load Screen -->
 <div id="loadScreen">
-  <div class="menu-logo">ROBOT WARS</div>
-  <div class="menu-sub">ARENA OF DESTRUCTION</div>
+  <div class="logo">ROBOT WARS</div>
+  <div class="sub-logo">ARENA OF DESTRUCTION</div>
   <div id="loadBar"><div id="loadBarFill"></div></div>
   <div id="loadMsg">INITIALIZING SYSTEMS...</div>
 </div>
 
-<!-- Menu Screen -->
 <div id="menuScreen">
-  <div class="menu-logo">ROBOT WARS</div>
-  <div class="menu-sub">ARENA OF DESTRUCTION</div>
+  <div class="logo" style="font-size:clamp(2.5rem,7vw,6rem)">ROBOT WARS</div>
+  <div class="sub-logo" style="margin-bottom:50px">ARENA OF DESTRUCTION</div>
   <button class="menu-btn" onclick="startWorkshop()">⚙ WORKSHOP</button>
-  <button class="menu-btn danger" onclick="startVsAI()">⚔ VS AI</button>
-  <button class="menu-btn" onclick="showOnlineMenu()">🌐 ONLINE BATTLE</button>
-  <button class="menu-btn back" onclick="" style="margin-top:20px;font-size:0.75rem;">CONTROLS: WASD/ARROWS · SPACE=WEAPON · Q=FLIPPER · E=SPINNER</button>
+  <button class="menu-btn danger" onclick="startVsAI()">⚔ VS AI (QUICK START)</button>
+  <div style="margin-top:16px;font-size:.65rem;color:#444;letter-spacing:.12em;text-align:center;">WASD/ARROWS: DRIVE &nbsp;·&nbsp; SPACE: WEAPON 1 &nbsp;·&nbsp; Q: WEAPON 2 &nbsp;·&nbsp; E: WEAPON 3 &nbsp;·&nbsp; C: CAMERA</div>
 </div>
 
-<!-- Workshop Screen -->
+<!-- Workshop -->
 <div id="workshopScreen">
   <div id="workshop-header">
     <h2>⚙ ROBOT WORKSHOP</h2>
@@ -600,40 +142,22 @@
       <button class="ws-btn ready" onclick="finishWorkshop()">FIGHT! →</button>
     </div>
   </div>
-
-  <!-- Bot name + colour bar -->
   <div id="ws-identity">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div style="font-size:0.65rem;color:#556;letter-spacing:0.15em;">BOT NAME</div>
+      <div style="font-size:.65rem;color:#556;letter-spacing:.15em;">BOT NAME</div>
       <input class="prop-inp" id="botNameInp" value="DESTRUCTOR" maxlength="18" style="width:160px;">
-      <div style="font-size:0.65rem;color:#556;letter-spacing:0.15em;margin-left:12px;">PRIMARY</div>
+      <div style="font-size:.65rem;color:#556;letter-spacing:.15em;margin-left:12px;">PRIMARY</div>
       <div class="color-swatches" id="color1swatches"></div>
-      <div style="font-size:0.65rem;color:#556;letter-spacing:0.15em;">SECONDARY</div>
+      <div style="font-size:.65rem;color:#556;letter-spacing:.15em;">SECONDARY</div>
       <div class="color-swatches" id="color2swatches"></div>
     </div>
   </div>
-
-  <!-- Four category columns -->
   <div id="ws-columns">
-    <div class="ws-col" id="wscol-chassis">
-      <div class="ws-col-header">🔷 CHASSIS</div>
-      <div class="ws-col-list" id="wslist-chassis"></div>
-    </div>
-    <div class="ws-col" id="wscol-drive">
-      <div class="ws-col-header">🔵 DRIVE</div>
-      <div class="ws-col-list" id="wslist-drive"></div>
-    </div>
-    <div class="ws-col" id="wscol-weapon">
-      <div class="ws-col-header">⚔ WEAPON</div>
-      <div class="ws-col-list" id="wslist-weapon"></div>
-    </div>
-    <div class="ws-col" id="wscol-armor">
-      <div class="ws-col-header">🛡 ARMOUR</div>
-      <div class="ws-col-list" id="wslist-armor"></div>
-    </div>
+    <div class="ws-col"><div class="ws-col-header">🔷 CHASSIS</div><div class="ws-col-list" id="wslist-chassis"></div></div>
+    <div class="ws-col"><div class="ws-col-header">🔵 DRIVE</div><div class="ws-col-list" id="wslist-drive"></div></div>
+    <div class="ws-col"><div class="ws-col-header">⚔ WEAPON</div><div class="ws-col-list" id="wslist-weapon"></div></div>
+    <div class="ws-col"><div class="ws-col-header">🛡 ARMOUR</div><div class="ws-col-list" id="wslist-armor"></div></div>
   </div>
-
-  <!-- Stats bar at bottom -->
   <div id="ws-statsbar">
     <div class="ws-stat"><span class="ws-stat-lbl">HP</span><span id="wss-hp">—</span></div>
     <div class="ws-stat"><span class="ws-stat-lbl">ARMOUR</span><span id="wss-arm">—</span></div>
@@ -645,88 +169,39 @@
   </div>
 </div>
 
-<!-- Online Modal -->
-<div id="onlineModal">
-  <div id="onlineBox">
-    <h3>🌐 ONLINE BATTLE</h3>
-    <div class="ol-section">
-      <div class="ol-label">YOUR PEER ID (share with opponent)</div>
-      <div id="myPeerId" onclick="copyPeerId()">Connecting...</div>
-    </div>
-    <div class="ol-section">
-      <div class="ol-label">OPPONENT PEER ID</div>
-      <input class="ol-inp" id="oppIdInp" placeholder="Paste opponent ID here...">
-    </div>
-    <div style="display:flex;gap:10px;margin-top:16px;">
-      <button class="ws-btn" style="flex:1" onclick="connectToPeer()">CONNECT & FIGHT</button>
-      <button class="ws-btn back" onclick="closeOnlineModal()">CANCEL</button>
-    </div>
-    <div id="ol-status"></div>
-  </div>
-</div>
-
-<!-- Game Canvas -->
 <canvas id="gameCanvas"></canvas>
 
-<!-- HUD -->
 <div id="hud">
-  <!-- Left side (player) -->
   <div class="hud-bar" id="hud-left">
     <div class="hud-name" id="p1name">DESTRUCTOR</div>
-    <div class="hud-hp-wrap">
-      <div class="hud-hp-fill" id="p1hp" style="width:100%"></div>
-    </div>
-    <div class="hud-stat-row">
-      <span>HP:</span><span id="p1hpval">100</span>
-      <span>ARM:</span><span id="p1armval">50</span>
-    </div>
-    <div style="margin-top:4px;" id="p1weapons"></div>
+    <div class="hud-hp-wrap"><div class="hud-hp-fill" id="p1hp" style="width:100%"></div></div>
+    <div class="hud-stat-row"><span>HP:</span><span id="p1hpval">100</span><span>ARM:</span><span id="p1armval">50</span></div>
+    <div class="weap-hud" id="p1weapons"></div>
   </div>
-
-  <!-- Center -->
   <div id="hud-center">
     <div id="hud-timer">3:00</div>
     <div id="hud-round">ROUND 1</div>
   </div>
-
-  <!-- Right side (opponent) -->
   <div class="hud-bar" id="hud-right">
     <div class="hud-name" id="p2name">KILLBOT 3000</div>
-    <div class="hud-hp-wrap" style="transform:scaleX(-1)">
-      <div class="hud-hp-fill" id="p2hp" style="width:100%"></div>
-    </div>
-    <div class="hud-stat-row" style="flex-direction:row-reverse">
-      <span>HP:</span><span id="p2hpval">100</span>
-      <span>ARM:</span><span id="p2armval">50</span>
-    </div>
+    <div class="hud-hp-wrap" style="transform:scaleX(-1)"><div class="hud-hp-fill" id="p2hp" style="width:100%"></div></div>
+    <div class="hud-stat-row" style="flex-direction:row-reverse"><span>HP:</span><span id="p2hpval">100</span><span>ARM:</span><span id="p2armval">50</span></div>
   </div>
-
-  <!-- Message -->
   <div id="hud-msg"></div>
-
-  <!-- Bottom hint -->
   <div id="controls-hint">
     <span><span class="ctrl-key">W/S</span> DRIVE</span>
     <span><span class="ctrl-key">A/D</span> STEER</span>
-    <span><span class="ctrl-key">SPACE</span> WEAPON</span>
-    <span><span class="ctrl-key">Q</span> FLIPPER</span>
-    <span><span class="ctrl-key">E</span> SPINNER</span>
-    <span><span class="ctrl-key">C</span> CAMERA</span>
+    <span><span class="ctrl-key">SPACE</span> WPN1</span>
+    <span><span class="ctrl-key">Q</span> WPN2</span>
+    <span><span class="ctrl-key">E</span> WPN3</span>
+    <span><span class="ctrl-key">C</span> CAM</span>
   </div>
 </div>
 
-<!-- Minimap -->
-<div id="minimap" style="display:none;">
-  <canvas id="minimapCanvas" width="120" height="120"></canvas>
-</div>
-
-<!-- Sparks canvas -->
+<div id="minimap" style="display:none;"><canvas id="minimapCanvas" width="120" height="120"></canvas></div>
 <canvas id="sparksCanvas"></canvas>
-
-<!-- Damage flash -->
 <div id="dmgFlash"></div>
 
-<!-- Result screen -->
 <div id="resultScreen">
   <h1 id="resultTitle">WINNER!</h1>
   <div id="resultSub">KNOCKOUT</div>
@@ -738,1766 +213,1432 @@
 
 <script>
 // =====================================================
-// COMPONENT DATABASE
+// COMPONENT DATABASE — damage/HP scaled for long fights
 // =====================================================
 const COMPONENTS = {
-  chassis: [
-    { id:'ch_wedge',     name:'Wedge Body',       icon:'🔷', w:4,h:3, weight:18, hp:120, armor:60, desc:'Angled front deflects hits', color:'#5577aa' },
-    { id:'ch_box',       name:'Box Frame',         icon:'📦', w:3,h:3, weight:14, hp:100, armor:50, desc:'Standard cube chassis', color:'#667788' },
-    { id:'ch_drum',      name:'Drum Shell',        icon:'🥁', w:3,h:3, weight:16, hp:110, armor:55, desc:'Rounded, harder to flip', color:'#778866' },
-    { id:'ch_lowrider',  name:'Low Rider',         icon:'🔲', w:4,h:2, weight:12, hp:80,  armor:40, desc:'Ultra-low profile', color:'#556644' },
-    { id:'ch_heavy',     name:'Heavyweight Shell', icon:'🛡', w:3,h:3, weight:24, hp:160, armor:80, desc:'Max armor, slow', color:'#445566' },
-    { id:'ch_compact',   name:'Compact Core',      icon:'⬜', w:2,h:2, weight:8,  hp:60,  armor:30, desc:'Tiny and nimble', color:'#776655' },
-    { id:'ch_hex',       name:'Hexapod Frame',     icon:'⬡', w:3,h:3, weight:15, hp:105, armor:52, desc:'Even weight distribution', color:'#558866' },
-    { id:'ch_titanium',  name:'Titanium Chassis',  icon:'💎', w:3,h:3, weight:20, hp:180, armor:90, desc:'Premium build', color:'#99aabb' },
+  chassis:[
+    {id:'ch_wedge',   name:'Wedge Body',       icon:'🔷',weight:18,hp:350,armor:55,desc:'Angled front deflects hits'},
+    {id:'ch_box',     name:'Box Frame',         icon:'📦',weight:14,hp:300,armor:45,desc:'Standard cube chassis'},
+    {id:'ch_drum',    name:'Drum Shell',        icon:'🥁',weight:16,hp:320,armor:50,desc:'Rounded, harder to flip'},
+    {id:'ch_lowrider',name:'Low Rider',         icon:'🔲',weight:12,hp:240,armor:35,desc:'Ultra-low profile'},
+    {id:'ch_heavy',   name:'Heavyweight Shell', icon:'🛡',weight:24,hp:450,armor:75,desc:'Max armor, slow'},
+    {id:'ch_compact', name:'Compact Core',      icon:'⬜',weight:8, hp:180,armor:25,desc:'Tiny and nimble'},
+    {id:'ch_titanium',name:'Titanium Chassis',  icon:'💎',weight:20,hp:500,armor:85,desc:'Premium build'},
   ],
-  drive: [
-    { id:'dr_wheel_sm',  name:'Small Wheels ×2',   icon:'🔵', w:1,h:1, weight:2,  speed:70, power:40, torque:50, desc:'Light, quick' },
-    { id:'dr_wheel_lg',  name:'Large Wheels ×2',   icon:'⭕', w:1,h:2, weight:4,  speed:60, power:60, torque:70, desc:'High torque' },
-    { id:'dr_omni',      name:'Omni Wheels ×4',    icon:'✳', w:1,h:1, weight:6,  speed:80, power:50, torque:40, desc:'Strafe capable' },
-    { id:'dr_track_l',   name:'Left Track',        icon:'▬', w:1,h:3, weight:7,  speed:50, power:80, torque:90, desc:'Heavy terrain' },
-    { id:'dr_track_r',   name:'Right Track',       icon:'▬', w:1,h:3, weight:7,  speed:50, power:80, torque:90, desc:'Heavy terrain' },
-    { id:'dr_spike',     name:'Spike Drive',       icon:'🔺', w:1,h:1, weight:3,  speed:65, power:55, torque:60, desc:'Grip surface' },
-    { id:'dr_hydraulic', name:'Hydraulic Legs',    icon:'🦵', w:1,h:2, weight:9,  speed:45, power:100,torque:100,desc:'Max power' },
-    { id:'dr_wheel_xl',  name:'XL Wheels ×2',      icon:'🔴', w:2,h:2, weight:6,  speed:55, power:75, torque:80, desc:'Massive grip' },
+  drive:[
+    {id:'dr_wheel_sm', name:'Small Wheels ×2', icon:'🔵',weight:2,speed:75,power:35,torque:45,desc:'Light, quick'},
+    {id:'dr_wheel_lg', name:'Large Wheels ×2', icon:'⭕',weight:4,speed:60,power:60,torque:70,desc:'High torque'},
+    {id:'dr_omni',     name:'Omni Wheels ×4',  icon:'✳', weight:6,speed:82,power:50,torque:40,desc:'Strafe capable'},
+    {id:'dr_track',    name:'Tank Tracks',      icon:'▬', weight:10,speed:48,power:90,torque:95,desc:'Heavy terrain'},
+    {id:'dr_hydraulic',name:'Hydraulic Legs',   icon:'🦵',weight:9,speed:45,power:100,torque:100,desc:'Max power'},
+    {id:'dr_wheel_xl', name:'XL Wheels ×2',    icon:'🔴',weight:6,speed:55,power:75,torque:80,desc:'Massive grip'},
   ],
-  weapon: [
-    { id:'wp_flipper',   name:'Front Flipper',     icon:'⬆', w:3,h:1, weight:8,  damage:30, type:'flipper',  cooldown:2500, desc:'Launches enemies' },
-    { id:'wp_spinner_h', name:'Horizontal Spinner',icon:'💿', w:2,h:2, weight:10, damage:50, type:'spinner',  cooldown:0,    desc:'Continuous spin' },
-    { id:'wp_spinner_v', name:'Vertical Spinner',  icon:'🌀', w:2,h:2, weight:10, damage:55, type:'vspinner', cooldown:0,    desc:'High-energy ring' },
-    { id:'wp_drum',      name:'Drum Weapon',       icon:'🥁', w:2,h:1, weight:9,  damage:40, type:'drum',     cooldown:0,    desc:'Spinning drum' },
-    { id:'wp_saw',       name:'Circular Saw',      icon:'⚙', w:1,h:1, weight:5,  damage:25, type:'saw',      cooldown:100,  desc:'Cutting disc' },
-    { id:'wp_hammer',    name:'Spike Hammer',      icon:'🔨', w:2,h:1, weight:7,  damage:45, type:'hammer',   cooldown:1500, desc:'Overhead strike' },
-    { id:'wp_lance',     name:'Battle Lance',      icon:'⚔', w:3,h:1, weight:6,  damage:20, type:'lance',    cooldown:500,  desc:'Long reach' },
-    { id:'wp_clamp',     name:'Crushing Clamp',    icon:'🦀', w:2,h:2, weight:11, damage:35, type:'clamp',    cooldown:2000, desc:'Holds & crushes' },
-    { id:'wp_thwack',    name:'Thwack Arm',        icon:'🌪', w:3,h:1, weight:6,  damage:30, type:'thwack',   cooldown:800,  desc:'Spinning tail' },
-    { id:'wp_axe',       name:'Pneumatic Axe',     icon:'🪓', w:2,h:2, weight:9,  damage:50, type:'axe',      cooldown:1800, desc:'Piercing blow' },
+  weapon:[
+    {id:'wp_flipper',  name:'Front Flipper',      icon:'⬆',weight:8, damage:18,type:'flipper', cooldown:2800,desc:'Launches enemies'},
+    {id:'wp_spinner_h',name:'Horizontal Spinner', icon:'💿',weight:10,damage:8, type:'spinner', cooldown:0,   desc:'Continuous spin dmg'},
+    {id:'wp_spinner_v',name:'Vertical Spinner',   icon:'🌀',weight:10,damage:10,type:'vspinner',cooldown:0,   desc:'High-energy ring'},
+    {id:'wp_drum',     name:'Drum Weapon',         icon:'🥁',weight:9, damage:9, type:'drum',    cooldown:0,   desc:'Spinning drum'},
+    {id:'wp_saw',      name:'Circular Saw',        icon:'⚙', weight:5,damage:6, type:'saw',     cooldown:200, desc:'Cutting disc'},
+    {id:'wp_hammer',   name:'Spike Hammer',        icon:'🔨',weight:7, damage:22,type:'hammer',  cooldown:1800,desc:'Overhead strike'},
+    {id:'wp_axe',      name:'Pneumatic Axe',       icon:'🪓',weight:9, damage:25,type:'axe',     cooldown:2000,desc:'Piercing blow'},
+    {id:'wp_clamp',    name:'Crushing Clamp',      icon:'🦀',weight:11,damage:20,type:'clamp',   cooldown:2200,desc:'Holds & crushes'},
   ],
-  armor: [
-    { id:'ar_steel',     name:'Steel Plate',       icon:'🛡', w:2,h:1, weight:5,  armor:15, desc:'Standard protection' },
-    { id:'ar_titanium',  name:'Titanium Plate',    icon:'💠', w:2,h:1, weight:4,  armor:22, desc:'Light & strong' },
-    { id:'ar_polycarbonate',name:'Polycarbonate',  icon:'🔷', w:2,h:1, weight:2,  armor:10, desc:'Lightweight' },
-    { id:'ar_hardox',    name:'Hardox Plate',      icon:'⬛', w:2,h:1, weight:7,  armor:30, desc:'Extra tough' },
-    { id:'ar_skirt',     name:'HDPE Skirt',        icon:'📏', w:3,h:1, weight:3,  armor:8,  desc:'Deflects attacks' },
-    { id:'ar_hinged',    name:'Hinged Armor',      icon:'🔄', w:2,h:1, weight:6,  armor:25, desc:'Absorbs impacts' },
-    { id:'ar_reactive',  name:'Reactive Armor',    icon:'⚡', w:2,h:1, weight:8,  armor:35, desc:'Counters blows' },
+  armor:[
+    {id:'ar_steel',     name:'Steel Plate',     icon:'🛡',weight:5,armor:20,desc:'Standard protection'},
+    {id:'ar_titanium',  name:'Titanium Plate',  icon:'💠',weight:4,armor:30,desc:'Light & strong'},
+    {id:'ar_polycarbonate',name:'Polycarbonate',icon:'🔷',weight:2,armor:12,desc:'Lightweight'},
+    {id:'ar_hardox',    name:'Hardox Plate',    icon:'⬛',weight:7,armor:40,desc:'Extra tough'},
+    {id:'ar_hinged',    name:'Hinged Armor',    icon:'🔄',weight:6,armor:35,desc:'Absorbs impacts'},
+    {id:'ar_reactive',  name:'Reactive Armor',  icon:'⚡',weight:8,armor:50,desc:'Counters blows'},
   ]
 };
 
-// Colors
-const COLORS1 = ['#cc2222','#2255cc','#22aa44','#cc8800','#8822cc','#cc4488','#228899','#aaaaaa'];
-const COLORS2 = ['#ffcc00','#ffffff','#ff8800','#00ffcc','#ff4488','#44ffaa','#8888ff','#333333'];
+const COLORS1=['#cc2222','#2255cc','#22aa44','#cc8800','#8822cc','#cc4488','#228899','#aaaaaa'];
+const COLORS2=['#ffcc00','#ffffff','#ff8800','#00ffcc','#ff4488','#44ffaa','#8888ff','#333333'];
+
+let wsSelected={chassis:null,drive:null,weapon:null,armor:null};
+let botColor1='#cc2222', botColor2='#ffcc00', botName='DESTRUCTOR';
 
 // =====================================================
 // STATE
 // =====================================================
-let currentTab = 'chassis';
-let selectedCompId = null;
-let placedParts = []; // {id, compId, gridX, gridY, color1, color2}
-let selectedPartIdx = -1;
-let botColor1 = '#cc2222';
-let botColor2 = '#ffcc00';
-let botName = 'DESTRUCTOR';
+let renderer,scene,camera,world;
+let p1Robot,p2Robot;
+let sparksCtx, sparks=[];
+let gameRunning=false, gameTime=180;
+let gameTimerInterval;
+let keys={};
+let cameraMode=0, cameraAngle=0;
+let weaponCDs={};
+let p1hp,p2hp,p1armor,p2armor;
+let frameId;
+let aiMode=true;
+let aiState={phase:'approach',timer:0,strafeDir:1};
+let hazardMeshes=[];
 
-let gameState = null; // 'ai' | 'online'
-let peer = null;
-let conn = null;
-let isHost = false;
+const ARENA_W=30, ARENA_H=30, WALL_H=2.5;
 
 // =====================================================
-// LOAD / INIT
+// LOAD
 // =====================================================
-window.onload = async function() {
-  // Fake loading
-  const steps = [
-    [20,'LOADING PHYSICS ENGINE...'],
-    [40,'BUILDING ARENA GEOMETRY...'],
-    [60,'LOADING WEAPON SYSTEMS...'],
-    [80,'INITIALIZING AI...'],
-    [95,'CALIBRATING SENSORS...'],
-    [100,'READY']
-  ];
-  for(const [pct,msg] of steps) {
-    document.getElementById('loadBarFill').style.width = pct+'%';
-    document.getElementById('loadMsg').textContent = msg;
-    await sleep(350 + Math.random()*250);
+window.onload=async function(){
+  const steps=[[20,'LOADING PHYSICS ENGINE...'],[40,'BUILDING ARENA GEOMETRY...'],[60,'LOADING WEAPON SYSTEMS...'],[80,'INITIALIZING AI...'],[100,'READY']];
+  for(const[pct,msg]of steps){
+    document.getElementById('loadBarFill').style.width=pct+'%';
+    document.getElementById('loadMsg').textContent=msg;
+    await sleep(350+Math.random()*250);
   }
   await sleep(400);
   document.getElementById('loadScreen').style.display='none';
-  showMenu();
-  initBuildCanvas();
   initSwatches();
+  showMenu();
 };
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
-
-function showMenu() {
-  hideAll();
-  document.getElementById('menuScreen').style.display='flex';
-}
-
-function hideAll() {
-  document.getElementById('menuScreen').style.display='none';
-  document.getElementById('workshopScreen').style.display='none';
-  document.getElementById('gameCanvas').style.display='none';
-  document.getElementById('hud').style.display='none';
-  document.getElementById('resultScreen').style.display='none';
+function showMenu(){hideAll();document.getElementById('menuScreen').style.display='flex';}
+function hideAll(){
+  ['menuScreen','workshopScreen','gameCanvas','hud','resultScreen'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.style.display='none';
+  });
   document.getElementById('minimap').style.display='none';
 }
 
 // =====================================================
-// WORKSHOP — console-style picker
+// WORKSHOP
 // =====================================================
+function getComp(id){for(const cat of Object.values(COMPONENTS)){const f=cat.find(c=>c.id===id);if(f)return f;}return null;}
 
-// One selection per category
-let wsSelected = { chassis: null, drive: null, weapon: null, armor: null };
+function startWorkshop(){hideAll();document.getElementById('workshopScreen').style.display='flex';renderAllColumns();updateWsStats();}
 
-function getComp(id) {
-  for(const cat of Object.values(COMPONENTS)) {
-    const f = cat.find(c=>c.id===id);
-    if(f) return f;
-  }
-  return null;
+function initSwatches(){
+  const s1=document.getElementById('color1swatches'),s2=document.getElementById('color2swatches');
+  COLORS1.forEach(c=>{const d=document.createElement('div');d.className='swatch'+(c===botColor1?' active':'');d.style.background=c;d.onclick=()=>{botColor1=c;s1.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active'));d.classList.add('active');};s1.appendChild(d);});
+  COLORS2.forEach(c=>{const d=document.createElement('div');d.className='swatch'+(c===botColor2?' active':'');d.style.background=c;d.onclick=()=>{botColor2=c;s2.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active'));d.classList.add('active');};s2.appendChild(d);});
 }
 
-function startWorkshop() {
-  hideAll();
-  document.getElementById('workshopScreen').style.display='flex';
-  renderAllColumns();
-  updateWsStats();
-}
+function renderAllColumns(){['chassis','drive','weapon','armor'].forEach(cat=>renderWsColumn(cat));}
 
-function initBuildCanvas() { /* no-op: canvas removed */ }
-
-function initSwatches() {
-  const s1 = document.getElementById('color1swatches');
-  const s2 = document.getElementById('color2swatches');
-  COLORS1.forEach(c=>{
-    const d = document.createElement('div');
-    d.className='swatch'+(c===botColor1?' active':'');
-    d.style.background=c;
-    d.onclick=()=>{ botColor1=c; s1.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active')); d.classList.add('active'); };
-    s1.appendChild(d);
-  });
-  COLORS2.forEach(c=>{
-    const d = document.createElement('div');
-    d.className='swatch'+(c===botColor2?' active':'');
-    d.style.background=c;
-    d.onclick=()=>{ botColor2=c; s2.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active')); d.classList.add('active'); };
-    s2.appendChild(d);
-  });
-}
-
-function renderAllColumns() {
-  ['chassis','drive','weapon','armor'].forEach(cat => renderWsColumn(cat));
-}
-
-function renderWsColumn(cat) {
-  const list = document.getElementById('wslist-'+cat);
+function renderWsColumn(cat){
+  const list=document.getElementById('wslist-'+cat);
   list.innerHTML='';
   COMPONENTS[cat].forEach(comp=>{
-    const row = document.createElement('div');
+    const row=document.createElement('div');
     row.className='ws-part-row'+(wsSelected[cat]===comp.id?' active':'');
-    row.innerHTML=`
-      <div class="ws-part-icon">${comp.icon}</div>
-      <div class="ws-part-info">
-        <div class="ws-part-name">${comp.name}</div>
-        <div class="ws-part-sub">${comp.desc||''}</div>
-        <div class="ws-part-stat">${wsStatLine(comp)}</div>
-      </div>
-      <div class="ws-part-kg">${comp.weight}kg</div>`;
-    row.onclick=()=>{
-      wsSelected[cat] = comp.id;
-      renderWsColumn(cat);
-      updateWsStats();
-    };
+    row.innerHTML=`<div class="ws-part-icon">${comp.icon}</div><div class="ws-part-info"><div class="ws-part-name">${comp.name}</div><div class="ws-part-sub">${comp.desc||''}</div><div class="ws-part-stat">${wsStatLine(comp)}</div></div><div class="ws-part-kg">${comp.weight}kg</div>`;
+    row.onclick=()=>{wsSelected[cat]=comp.id;renderWsColumn(cat);updateWsStats();};
     list.appendChild(row);
   });
 }
 
-function wsStatLine(comp) {
-  if(comp.hp)     return 'HP '+comp.hp+'  ARM '+comp.armor;
-  if(comp.speed)  return 'SPD '+comp.speed+'  PWR '+comp.power;
-  if(comp.damage) return 'DMG '+comp.damage+'  CD '+(comp.cooldown?comp.cooldown+'ms':'CONT');
-  if(comp.armor)  return 'ARM '+comp.armor;
+function wsStatLine(c){
+  if(c.hp) return 'HP '+c.hp+'  ARM '+c.armor;
+  if(c.speed) return 'SPD '+c.speed+'  PWR '+c.power;
+  if(c.damage) return 'DMG '+c.damage+'  CD '+(c.cooldown?c.cooldown+'ms':'CONT');
+  if(c.armor) return 'ARM '+c.armor;
   return '';
 }
 
-function updateWsStats() {
+function updateWsStats(){
   let hp=0,arm=0,spd=0,dmg=0,wt=0,pwr=0;
-  Object.entries(wsSelected).forEach(([cat,id])=>{
-    if(!id) return;
-    const c=getComp(id); if(!c) return;
-    wt+=c.weight;
-    if(c.hp){hp=c.hp;arm+=c.armor;}
-    if(c.speed){spd=Math.max(spd,c.speed);pwr+=c.power;}
-    if(c.damage) dmg+=c.damage;
-    if(c.armor&&!c.hp) arm+=c.armor;
-  });
-  document.getElementById('wss-hp').textContent  = hp||'—';
-  document.getElementById('wss-arm').textContent = arm||'—';
-  document.getElementById('wss-spd').textContent = spd||'—';
-  document.getElementById('wss-dmg').textContent = dmg||'—';
-  document.getElementById('wss-wt').textContent  = wt ? wt+'kg' : '—';
-  document.getElementById('wss-pwr').textContent = pwr||'—';
+  Object.entries(wsSelected).forEach(([,id])=>{if(!id)return;const c=getComp(id);if(!c)return;wt+=c.weight;if(c.hp){hp=c.hp;arm+=c.armor;}if(c.speed){spd=Math.max(spd,c.speed);pwr+=c.power;}if(c.damage)dmg+=c.damage;if(c.armor&&!c.hp)arm+=c.armor;});
+  document.getElementById('wss-hp').textContent=hp||'—';
+  document.getElementById('wss-arm').textContent=arm||'—';
+  document.getElementById('wss-spd').textContent=spd||'—';
+  document.getElementById('wss-dmg').textContent=dmg||'—';
+  document.getElementById('wss-wt').textContent=wt?wt+'kg':'—';
+  document.getElementById('wss-pwr').textContent=pwr||'—';
 }
 
-function calcTotalWeight() {
-  return Object.values(wsSelected).reduce((s,id)=>{ const c=getComp(id); return s+(c?c.weight:0); },0);
-}
-
-function calcBotStats() {
-  let hp=0,armor=0,speed=0,damage=0,power=0,weight=0;
-  let hasChassis=false, weapons=[];
+function calcBotStats(){
+  let hp=300,armor=50,speed=60,damage=15,power=60,weight=20,weapons=[];
   Object.values(wsSelected).forEach(id=>{
-    if(!id) return;
-    const c=getComp(id); if(!c) return;
+    if(!id)return;const c=getComp(id);if(!c)return;
     weight+=c.weight;
-    if(c.hp){hp=c.hp;armor+=c.armor;hasChassis=true;}
+    if(c.hp){hp=c.hp;armor=c.armor;}
     if(c.speed){speed=Math.max(speed,c.speed);power+=c.power;}
-    if(c.damage){damage+=c.damage;weapons.push({...c,cooldown:c.cooldown||1000});}
-    if(c.armor&&!c.hp) armor+=c.armor;
+    if(c.damage){damage+=c.damage;weapons.push({...c});}
+    if(c.armor&&!c.hp)armor+=c.armor;
   });
-  return {hp,armor,speed,damage,power,weight,hasChassis,weapons};
+  return{hp,armor,speed,damage,power,weight,weapons};
 }
 
-// placedParts is kept as a flat array for 3D builder compat
-function buildPlacedPartsFromSelection() {
-  placedParts = [];
-  let id=1;
-  Object.values(wsSelected).forEach(compId=>{
-    if(compId) placedParts.push({id:id++, compId, gridX:0, gridY:0, color1:botColor1, color2:botColor2});
-  });
+function buildPlacedParts(){
+  return Object.values(wsSelected).filter(Boolean).map(compId=>({compId}));
 }
 
-function loadPreset(type) {
-  if(type==='wedge') {
-    botColor1='#cc2222'; botColor2='#ffcc00';
-    wsSelected={chassis:'ch_wedge',drive:'dr_wheel_lg',weapon:'wp_flipper',armor:'ar_hardox'};
-    document.getElementById('botNameInp').value='IRON WEDGE';
-  } else if(type==='spinner') {
-    botColor1='#2255cc'; botColor2='#00ffcc';
-    wsSelected={chassis:'ch_drum',drive:'dr_wheel_sm',weapon:'wp_spinner_h',armor:'ar_titanium'};
-    document.getElementById('botNameInp').value='VORTEX';
-  } else if(type==='flipper') {
-    botColor1='#228844'; botColor2='#ffcc00';
-    wsSelected={chassis:'ch_box',drive:'dr_track_l',weapon:'wp_flipper',armor:'ar_steel'};
-    document.getElementById('botNameInp').value='FLOOR FURY';
-  }
-  renderAllColumns();
-  updateWsStats();
-}
-
-
-
-function drawChassisSprite(ctx, comp, x, y, w, h, c1, c2) {
-  // Metal plate look
-  const g = ctx.createLinearGradient(x,y,x,y+h);
-  g.addColorStop(0, lightenColor(c1,0.4));
-  g.addColorStop(0.5, c1);
-  g.addColorStop(1, darkenColor(c1,0.3));
-  ctx.fillStyle=g;
-  if(comp.id==='ch_wedge') {
-    ctx.beginPath();
-    ctx.moveTo(x,y+h);
-    ctx.lineTo(x+w,y+h);
-    ctx.lineTo(x+w,y);
-    ctx.lineTo(x,y+h*0.4);
-    ctx.closePath();
-    ctx.fill();
-  } else {
-    ctx.fillRect(x+1,y+1,w-2,h-2);
-  }
-  // Rivets
-  ctx.fillStyle=darkenColor(c1,0.5);
-  const rvs = [[3,3],[w-5,3],[3,h-5],[w-5,h-5]];
-  rvs.forEach(([rx,ry])=>{
-    if(rx<w&&ry<h){ctx.beginPath();ctx.arc(x+rx,y+ry,2,0,Math.PI*2);ctx.fill();}
-  });
-  // Stripe
-  ctx.fillStyle=c2+'88';
-  ctx.fillRect(x+1,y+h*0.4,w-2,3);
-}
-
-function drawDriveSprite(ctx, comp, x, y, w, h, c1, c2) {
-  if(comp.id.includes('wheel')) {
-    // Wheel appearance
-    ctx.fillStyle='#111';
-    ctx.beginPath(); ctx.arc(x+w/2,y+h/2,Math.min(w,h)/2-2,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c1; ctx.lineWidth=4;
-    ctx.beginPath(); ctx.arc(x+w/2,y+h/2,Math.min(w,h)/2-4,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle=c2;
-    ctx.beginPath(); ctx.arc(x+w/2,y+h/2,Math.min(w,h)/4,0,Math.PI*2); ctx.fill();
-    // Spokes
-    ctx.strokeStyle=darkenColor(c1,0.3); ctx.lineWidth=2;
-    for(let a=0;a<4;a++){
-      const ang=a*Math.PI/2;
-      ctx.beginPath();
-      ctx.moveTo(x+w/2+Math.cos(ang)*(Math.min(w,h)/4),y+h/2+Math.sin(ang)*(Math.min(w,h)/4));
-      ctx.lineTo(x+w/2+Math.cos(ang)*(Math.min(w,h)/2-5),y+h/2+Math.sin(ang)*(Math.min(w,h)/2-5));
-      ctx.stroke();
-    }
-  } else if(comp.id.includes('track')) {
-    // Track appearance
-    ctx.fillStyle='#222';
-    ctx.fillRect(x+1,y+1,w-2,h-2);
-    ctx.fillStyle=c1;
-    for(let seg=0;seg<h/CELL*3;seg++){
-      ctx.fillRect(x+2, y+2+seg*(h/CELL*3/4), w-4, (h/CELL*3/4)-2);
-    }
-    ctx.strokeStyle=c2; ctx.lineWidth=1;
-    ctx.strokeRect(x+2,y+2,w-4,h-4);
-  } else {
-    ctx.fillStyle=c1; ctx.fillRect(x+1,y+1,w-2,h-2);
-  }
-}
-
-function drawWeaponSprite(ctx, comp, x, y, w, h, c1, c2) {
-  if(comp.type==='spinner'||comp.type==='vspinner'||comp.type==='drum') {
-    // Disc
-    const g=ctx.createRadialGradient(x+w/2,y+h/2,2,x+w/2,y+h/2,Math.min(w,h)/2);
-    g.addColorStop(0,lightenColor(c1,0.5));
-    g.addColorStop(1,darkenColor(c1,0.3));
-    ctx.fillStyle=g;
-    ctx.beginPath(); ctx.arc(x+w/2,y+h/2,Math.min(w,h)/2-2,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c2; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(x+w/2,y+h/2,Math.min(w,h)/2-4,0,Math.PI*2); ctx.stroke();
-    // Teeth
-    ctx.fillStyle=c2;
-    for(let a=0;a<6;a++){
-      const ang=a*Math.PI/3;
-      const ox=Math.cos(ang)*(Math.min(w,h)/2-3)+x+w/2;
-      const oy=Math.sin(ang)*(Math.min(w,h)/2-3)+y+h/2;
-      ctx.beginPath(); ctx.arc(ox,oy,3,0,Math.PI*2); ctx.fill();
-    }
-  } else if(comp.type==='flipper') {
-    ctx.fillStyle=c1;
-    ctx.beginPath();
-    ctx.moveTo(x+2,y+h-2); ctx.lineTo(x+w-2,y+h-2);
-    ctx.lineTo(x+w-2,y+h/2); ctx.lineTo(x+w/2,y+2); ctx.lineTo(x+2,y+h/2);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=c2; ctx.lineWidth=2; ctx.stroke();
-  } else {
-    // Default weapon look
-    const g=ctx.createLinearGradient(x,y,x+w,y+h);
-    g.addColorStop(0,c2); g.addColorStop(1,darkenColor(c1,0.3));
-    ctx.fillStyle=g;
-    ctx.fillRect(x+1,y+1,w-2,h-2);
-    ctx.fillStyle=lightenColor(c1,0.5);
-    ctx.fillRect(x+2,y+2,4,h-4);
-  }
-}
-
-function drawArmorSprite(ctx, comp, x, y, w, h, c1, c2) {
-  const g=ctx.createLinearGradient(x,y,x,y+h);
-  g.addColorStop(0,lightenColor(c1,0.5));
-  g.addColorStop(1,darkenColor(c1,0.4));
-  ctx.fillStyle=g;
-  ctx.fillRect(x+1,y+1,w-2,h-2);
-  // Metal lines
-  ctx.strokeStyle=lightenColor(c1,0.3); ctx.lineWidth=1;
-  for(let i=0;i<3;i++){
-    ctx.beginPath();
-    ctx.moveTo(x+2,y+4+i*(h/3)); ctx.lineTo(x+w-2,y+4+i*(h/3)); ctx.stroke();
-  }
-  ctx.strokeStyle=c2+'66'; ctx.lineWidth=2;
-  ctx.strokeRect(x+1,y+1,w-2,h-2);
-}
-
-function getCompCategory(id) {
-  for(const [cat,items] of Object.entries(COMPONENTS)) {
-    if(items.find(c=>c.id===id)) return cat;
-  }
-  return 'misc';
-}
-
-function lightenColor(hex, amt) {
-  const n = parseInt(hex.replace('#',''),16);
-  const r=Math.min(255,((n>>16)&0xff)+Math.round(amt*255));
-  const g=Math.min(255,((n>>8)&0xff)+Math.round(amt*255));
-  const b=Math.min(255,(n&0xff)+Math.round(amt*255));
-  return `rgb(${r},${g},${b})`;
-}
-
-function darkenColor(hex, amt) {
-  const n = parseInt(hex.replace('#',''),16);
-  const r=Math.max(0,((n>>16)&0xff)-Math.round(amt*255));
-  const g=Math.max(0,((n>>8)&0xff)-Math.round(amt*255));
-  const b=Math.max(0,(n&0xff)-Math.round(amt*255));
-  return `rgb(${r},${g},${b})`;
-}
-
-
-function finishWorkshop() {
-  if(!wsSelected.chassis) { document.getElementById('ws-statmsg').textContent='SELECT A CHASSIS!'; return; }
-  if(!wsSelected.drive)   { document.getElementById('ws-statmsg').textContent='SELECT A DRIVE SYSTEM!'; return; }
+function finishWorkshop(){
+  if(!wsSelected.chassis){document.getElementById('ws-statmsg').textContent='SELECT A CHASSIS!';return;}
+  if(!wsSelected.drive){document.getElementById('ws-statmsg').textContent='SELECT A DRIVE SYSTEM!';return;}
   document.getElementById('ws-statmsg').textContent='';
-  botName = document.getElementById('botNameInp').value.trim()||'DESTRUCTOR';
-  buildPlacedPartsFromSelection();
-  hideAll();
-  showMenu();
+  botName=document.getElementById('botNameInp').value.trim()||'DESTRUCTOR';
+  hideAll();showMenu();
 }
 
 // =====================================================
-// PRESETS for AI opponent
+// AI PRESETS
 // =====================================================
-const AI_PRESETS = [
-  {
-    name:'KILLBOT 3000',
-    color1:'#331111',color2:'#ff4400',
-    parts:[
-      {compId:'ch_heavy',gridX:4,gridY:4},
-      {compId:'dr_track_l',gridX:2,gridY:4},
-      {compId:'dr_track_r',gridX:9,gridY:4},
-      {compId:'wp_spinner_h',gridX:5,gridY:4},
-      {compId:'ar_hardox',gridX:4,gridY:7},
-      {compId:'ar_steel',gridX:7,gridY:4},
-    ]
-  },
-  {
-    name:'SHREDDER X',
-    color1:'#1a1144',color2:'#aa00ff',
-    parts:[
-      {compId:'ch_wedge',gridX:3,gridY:4},
-      {compId:'dr_wheel_xl',gridX:1,gridY:4},
-      {compId:'dr_wheel_xl',gridX:9,gridY:4},
-      {compId:'wp_drum',gridX:5,gridY:3},
-      {compId:'ar_titanium',gridX:3,gridY:7},
-    ]
-  },
-  {
-    name:'ANNIHILATOR',
-    color1:'#1a1a00',color2:'#ffdd00',
-    parts:[
-      {compId:'ch_titanium',gridX:4,gridY:4},
-      {compId:'dr_hydraulic',gridX:2,gridY:4},
-      {compId:'dr_hydraulic',gridX:9,gridY:5},
-      {compId:'wp_axe',gridX:5,gridY:3},
-      {compId:'wp_saw',gridX:4,gridY:3},
-      {compId:'ar_reactive',gridX:4,gridY:7},
-    ]
-  }
+const AI_PRESETS=[
+  {name:'KILLBOT 3000',color1:'#331111',color2:'#ff4400',sel:{chassis:'ch_heavy',drive:'dr_track',weapon:'wp_spinner_h',armor:'ar_hardox'}},
+  {name:'SHREDDER X',  color1:'#1a1144',color2:'#aa00ff',sel:{chassis:'ch_wedge',drive:'dr_wheel_xl',weapon:'wp_drum',armor:'ar_titanium'}},
+  {name:'ANNIHILATOR', color1:'#1a1a00',color2:'#ffdd00',sel:{chassis:'ch_titanium',drive:'dr_hydraulic',weapon:'wp_axe',armor:'ar_reactive'}},
+  {name:'VORTEX',      color1:'#002244',color2:'#00ccff',sel:{chassis:'ch_drum',drive:'dr_omni',weapon:'wp_spinner_v',armor:'ar_hinged'}},
+  {name:'IRONCLAD',    color1:'#2a1a00',color2:'#ff6600',sel:{chassis:'ch_box',drive:'dr_wheel_lg',weapon:'wp_flipper',armor:'ar_steel'}},
 ];
 
 // =====================================================
-// 3D GAME ENGINE
+// GAME INIT
 // =====================================================
-let renderer, scene, camera, world;
-let p1Robot, p2Robot;
-let arenaGroup;
-let sparksCtx;
-let sparks = [];
-let gameRunning = false;
-let gameTime = 180;
-let gameTimerInterval;
-let keys = {};
-let cameraMode = 0; // 0=follow, 1=top, 2=free
-let cameraAngle = 0;
-let weaponCooldowns = {};
-let p1hp, p2hp;
-let p1armor, p2armor;
-let frameId;
-let onlineMode = false;
-let aiMode = false;
-let aiState = {phase:'approach',timer:0,targetAngle:0,spinning:false};
-let hazardTimers = [];
-
-// Arena dimensions
-const ARENA_W = 30;
-const ARENA_H = 30;
-const WALL_H = 2.5;
-
-function startVsAI() {
-  // If nothing selected, load wedge preset
-  if(!wsSelected.chassis) {
-    loadPreset('wedge');
-    botName='IRON WEDGE';
-  }
-  buildPlacedPartsFromSelection();
-  aiMode = true;
-  onlineMode = false;
+function startVsAI(){
+  if(!wsSelected.chassis){wsSelected={chassis:'ch_wedge',drive:'dr_wheel_lg',weapon:'wp_flipper',armor:'ar_hardox'};botName='IRON WEDGE';}
+  aiMode=true;
   initGame();
 }
 
-function initGame() {
+function initGame(){
   hideAll();
   document.getElementById('gameCanvas').style.display='block';
   document.getElementById('hud').style.display='block';
   document.getElementById('minimap').style.display='block';
 
-  // Setup sparks canvas
-  const sc = document.getElementById('sparksCanvas');
-  sc.width = window.innerWidth;
-  sc.height = window.innerHeight;
-  sparksCtx = sc.getContext('2d');
-  sparks = [];
+  const sc=document.getElementById('sparksCanvas');
+  sc.width=window.innerWidth;sc.height=window.innerHeight;
+  sparksCtx=sc.getContext('2d');sparks=[];
 
-  initThree();
-  initPhysics();
-  buildArena();
-  spawnRobots();
-  startGameLoop();
-  startTimer();
+  initThree();initPhysics();buildArena();spawnRobots();
+  buildWeaponHUD();
+  startGameLoop();startTimer();
+  gameRunning=true;
 
-  gameRunning = true;
+  document.addEventListener('keydown',onKeyDown);
+  document.addEventListener('keyup',onKeyUp);
+  window.addEventListener('resize',onResize);
 
-  // Controls
-  document.addEventListener('keydown', onKeyDown);
-  document.addEventListener('keyup', onKeyUp);
-  window.addEventListener('resize', onResize);
+  setTimeout(()=>{if(gameRunning)showHudMsg('FIGHT!',1500);},600);
 }
 
-function initThree() {
-  const canvas = document.getElementById('gameCanvas');
+function initThree(){
+  const canvas=document.getElementById('gameCanvas');
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.3;
 
-  renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x080c14);
+  scene.fog=new THREE.Fog(0x080c14,35,65);
 
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0a);
-  scene.fog = new THREE.Fog(0x0a0a0a, 30, 60);
+  camera=new THREE.PerspectiveCamera(65,window.innerWidth/window.innerHeight,0.1,100);
+  camera.position.set(0,8,12);camera.lookAt(0,0,0);
 
-  camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 100);
-  camera.position.set(0, 8, 12);
-  camera.lookAt(0,0,0);
+  scene.add(new THREE.AmbientLight(0x223355,0.6));
 
-  // Lighting
-  const ambient = new THREE.AmbientLight(0x224466, 0.5);
-  scene.add(ambient);
+  const dir=new THREE.DirectionalLight(0xffffff,1.4);
+  dir.position.set(10,20,10);dir.castShadow=true;
+  dir.shadow.mapSize.width=2048;dir.shadow.mapSize.height=2048;
+  dir.shadow.camera.near=0.1;dir.shadow.camera.far=60;
+  dir.shadow.camera.left=-22;dir.shadow.camera.right=22;
+  dir.shadow.camera.top=22;dir.shadow.camera.bottom=-22;
+  scene.add(dir);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  dirLight.position.set(10,20,10);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-  dirLight.shadow.camera.near = 0.1;
-  dirLight.shadow.camera.far = 60;
-  dirLight.shadow.camera.left = -20;
-  dirLight.shadow.camera.right = 20;
-  dirLight.shadow.camera.top = 20;
-  dirLight.shadow.camera.bottom = -20;
-  scene.add(dirLight);
-
-  // Colored fill lights
-  const fill1 = new THREE.PointLight(0xff3300, 1.5, 20);
-  fill1.position.set(-8, 4, -8);
-  scene.add(fill1);
-  const fill2 = new THREE.PointLight(0x0033ff, 1.5, 20);
-  fill2.position.set(8, 4, 8);
-  scene.add(fill2);
-  const topLight = new THREE.SpotLight(0xffffff, 2, 40, Math.PI/6);
-  topLight.position.set(0, 18, 0);
-  topLight.target.position.set(0,0,0);
-  topLight.castShadow=true;
-  scene.add(topLight);
-  scene.add(topLight.target);
+  scene.add(Object.assign(new THREE.PointLight(0xff3300,2,25),{position:{x:-10,y:5,z:-10}}));
+  scene.add(Object.assign(new THREE.PointLight(0x0033ff,2,25),{position:{x:10,y:5,z:10}}));
+  const spot=new THREE.SpotLight(0xffffff,2.5,45,Math.PI/6);
+  spot.position.set(0,18,0);spot.castShadow=true;
+  scene.add(spot);scene.add(spot.target);
 }
 
-function initPhysics() {
-  world = new CANNON.World();
-  world.gravity.set(0, -25, 0);
-  world.broadphase = new CANNON.SAPBroadphase(world);
-  world.allowSleep = false;
-  world.solver.iterations = 10;
+function initPhysics(){
+  world=new CANNON.World();
+  world.gravity.set(0,-25,0);
+  world.broadphase=new CANNON.SAPBroadphase(world);
+  world.allowSleep=false;
+  world.solver.iterations=12;
 }
 
-const matCache = {};
-function getMat(color, roughness=0.6, metalness=0.8) {
-  const key=`${color}-${roughness}-${metalness}`;
-  if(!matCache[key]) matCache[key]=new THREE.MeshStandardMaterial({color,roughness,metalness});
-  return matCache[key];
-}
+// =====================================================
+// ARENA BUILD
+// =====================================================
+function buildArena(){
+  // Floor
+  const floorGeo=new THREE.PlaneGeometry(ARENA_W,ARENA_H,30,30);
+  const floorMat=new THREE.MeshStandardMaterial({color:0x111820,roughness:0.95,metalness:0.2});
+  const floor=new THREE.Mesh(floorGeo,floorMat);
+  floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
 
-function buildArena() {
-  arenaGroup = new THREE.Group();
-  scene.add(arenaGroup);
+  // Grid
+  const gm=new THREE.LineBasicMaterial({color:0x1a3050,transparent:true,opacity:0.4});
+  for(let i=-ARENA_W/2;i<=ARENA_W/2;i+=2){scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(i,.01,-ARENA_H/2),new THREE.Vector3(i,.01,ARENA_H/2)]),gm));}
+  for(let i=-ARENA_H/2;i<=ARENA_H/2;i+=2){scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-ARENA_W/2,.01,i),new THREE.Vector3(ARENA_W/2,.01,i)]),gm));}
 
-  // Floor - metal grating
-  const floorGeo = new THREE.PlaneGeometry(ARENA_W, ARENA_H, 30, 30);
-  const floorMat = new THREE.MeshStandardMaterial({
-    color:0x1a1a2e,
-    roughness:0.9,
-    metalness:0.3,
-  });
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x=-Math.PI/2;
-  floor.receiveShadow=true;
-  arenaGroup.add(floor);
+  // Danger X cross floor decal
+  const dm=new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.08,side:THREE.DoubleSide});
+  const dc1=new THREE.Mesh(new THREE.PlaneGeometry(1.5,ARENA_H),dm);dc1.rotation.x=-Math.PI/2;dc1.position.y=.02;scene.add(dc1);
+  const dc2=dc1.clone();dc2.rotation.set(-Math.PI/2,0,Math.PI/2);dc2.position.y=.02;scene.add(dc2);
 
-  // Floor grid lines
-  const gridMat = new THREE.LineBasicMaterial({color:0x1a3050,transparent:true,opacity:0.5});
-  for(let i=-ARENA_W/2;i<=ARENA_W/2;i+=2) {
-    const pts=[new THREE.Vector3(i,0.01,-ARENA_H/2),new THREE.Vector3(i,0.01,ARENA_H/2)];
-    arenaGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gridMat));
-  }
-  for(let i=-ARENA_H/2;i<=ARENA_H/2;i+=2) {
-    const pts=[new THREE.Vector3(-ARENA_W/2,0.01,i),new THREE.Vector3(ARENA_W/2,0.01,i)];
-    arenaGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),gridMat));
-  }
-
-  // Arena logo on floor
-  addFloorDecal();
+  // Physics floor
+  const fb=new CANNON.Body({mass:0});
+  fb.addShape(new CANNON.Plane());
+  fb.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
+  world.addBody(fb);
 
   // Walls
-  const wallMat = new THREE.MeshStandardMaterial({color:0x2a3a4a,roughness:0.7,metalness:0.6});
-  const walls = [
-    {p:[0,WALL_H/2,-ARENA_H/2-0.25],s:[ARENA_W+0.5,WALL_H,0.5]},
-    {p:[0,WALL_H/2,ARENA_H/2+0.25],s:[ARENA_W+0.5,WALL_H,0.5]},
-    {p:[-ARENA_W/2-0.25,WALL_H/2,0],s:[0.5,WALL_H,ARENA_H]},
-    {p:[ARENA_W/2+0.25,WALL_H/2,0],s:[0.5,WALL_H,ARENA_H]},
+  const wallMat=new THREE.MeshStandardMaterial({color:0x2a3a4a,roughness:0.6,metalness:0.7});
+  const walls=[
+    {p:[0,WALL_H/2,-ARENA_H/2-.25],s:[ARENA_W+.5,WALL_H,.5]},
+    {p:[0,WALL_H/2,ARENA_H/2+.25],s:[ARENA_W+.5,WALL_H,.5]},
+    {p:[-ARENA_W/2-.25,WALL_H/2,0],s:[.5,WALL_H,ARENA_H]},
+    {p:[ARENA_W/2+.25,WALL_H/2,0],s:[.5,WALL_H,ARENA_H]},
   ];
   walls.forEach(({p,s})=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(s[0],s[1],s[2]),wallMat);
-    mesh.position.set(...p);
-    mesh.castShadow=true; mesh.receiveShadow=true;
-    arenaGroup.add(mesh);
+    const m=new THREE.Mesh(new THREE.BoxGeometry(s[0],s[1],s[2]),wallMat);
+    m.position.set(...p);m.castShadow=true;m.receiveShadow=true;scene.add(m);
 
-    // Physics wall
-    const body=new CANNON.Body({mass:0});
-    body.addShape(new CANNON.Box(new CANNON.Vec3(s[0]/2,s[1]/2,s[2]/2)));
-    body.position.set(...p);
-    world.addBody(body);
+    // Wall glowing edge strips
+    const em=new THREE.MeshBasicMaterial({color:0x00aaff,transparent:true,opacity:0.15});
+    const strip=new THREE.Mesh(new THREE.BoxGeometry(s[0]-.2,0.08,s[2]-.2),em);
+    strip.position.set(p[0],p[1]+WALL_H/2-.05,p[2]);scene.add(strip);
+
+    const b=new CANNON.Body({mass:0});
+    b.addShape(new CANNON.Box(new CANNON.Vec3(s[0]/2,s[1]/2,s[2]/2)));
+    b.position.set(...p);world.addBody(b);
   });
 
-  // Floor body
-  const floorBody = new CANNON.Body({mass:0});
-  floorBody.addShape(new CANNON.Plane());
-  floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0),-Math.PI/2);
-  world.addBody(floorBody);
-
-  // Hazards: Flame jets
-  addHazards();
-
-  // Corner pillars
-  const pillarMat = new THREE.MeshStandardMaterial({color:0x3a4a5a,roughness:0.5,metalness:0.8});
+  // Pillars
+  const pillarMat=new THREE.MeshStandardMaterial({color:0x1a2a3a,roughness:0.4,metalness:0.9});
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
-    const pillar=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.5,WALL_H*1.2,8),pillarMat);
-    pillar.position.set(sx*(ARENA_W/2+0.25),WALL_H/2,sz*(ARENA_H/2+0.25));
-    pillar.castShadow=true;
-    arenaGroup.add(pillar);
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(.45,.55,WALL_H*1.3,8),pillarMat);
+    p.position.set(sx*(ARENA_W/2+.25),WALL_H*.65,sz*(ARENA_H/2+.25));
+    p.castShadow=true;scene.add(p);
+    // Pillar glow ring
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.5,.04,8,16),new THREE.MeshBasicMaterial({color:0x00aaff,transparent:true,opacity:.4}));
+    ring.position.set(sx*(ARENA_W/2+.25),WALL_H+.05,sz*(ARENA_H/2+.25));
+    ring.rotation.x=Math.PI/2;scene.add(ring);
   });
 
-  // Ceiling frame
-  const ceilMat=new THREE.MeshStandardMaterial({color:0x1a2a3a,roughness:0.8,metalness:0.5,wireframe:false,transparent:true,opacity:0.3});
-  const ceilBeams=[
-    {p:[0,WALL_H+0.1,0],s:[ARENA_W+1,0.15,0.15]},
-    {p:[0,WALL_H+0.1,0],s:[0.15,0.15,ARENA_H+1]},
-    {p:[0,WALL_H+0.1,-ARENA_H/4],s:[ARENA_W+1,0.15,0.15]},
-    {p:[0,WALL_H+0.1,ARENA_H/4],s:[ARENA_W+1,0.15,0.15]},
-  ];
-  ceilBeams.forEach(({p,s})=>{
-    const m=new THREE.Mesh(new THREE.BoxGeometry(s[0],s[1],s[2]),ceilMat);
-    m.position.set(...p); arenaGroup.add(m);
-  });
-}
-
-function addFloorDecal() {
-  // Danger stripes around hazard zones
-  const stripeMat = new THREE.MeshBasicMaterial({color:0xff4400,transparent:true,opacity:0.15});
-  const stripe = new THREE.Mesh(new THREE.PlaneGeometry(2,ARENA_H),stripeMat);
-  stripe.rotation.x=-Math.PI/2; stripe.position.set(0,0.02,0);
-  arenaGroup.add(stripe);
-  const stripe2=stripe.clone(); stripe2.position.set(0,0.02,0); stripe2.rotation.y=Math.PI/2;
-  arenaGroup.add(stripe2);
-}
-
-let hazardMeshes = [];
-let hazardBodies = [];
-
-function addHazards() {
-  // Flame jets at corners and center edges
-  const hazardPositions = [
-    {x:0,z:0,type:'spinner'},
-    {x:-ARENA_W/4,z:0,type:'flame'},
-    {x:ARENA_W/4,z:0,type:'flame'},
-    {x:0,z:-ARENA_H/4,type:'pit'},
-    {x:0,z:ARENA_H/4,type:'pit'},
-  ];
-
-  hazardPositions.forEach(h=>{
-    if(h.type==='flame') {
-      // Flame jet pod
-      const geo=new THREE.CylinderGeometry(0.3,0.4,0.3,8);
-      const mat=new THREE.MeshStandardMaterial({color:0x443300,roughness:0.4,metalness:0.9});
-      const mesh=new THREE.Mesh(geo,mat);
-      mesh.position.set(h.x,0.15,h.z);
-      arenaGroup.add(mesh);
-      hazardMeshes.push({mesh,type:'flame',x:h.x,z:h.z,active:false,timer:0,interval:3000+Math.random()*2000});
-    } else if(h.type==='spinner') {
-      // Floor spinner
-      const geo=new THREE.CylinderGeometry(1.2,1.2,0.1,16);
-      const mat=new THREE.MeshStandardMaterial({color:0x888800,roughness:0.3,metalness:1.0,emissive:0x221100});
-      const mesh=new THREE.Mesh(geo,mat);
-      mesh.position.set(h.x,0.05,h.z);
-      arenaGroup.add(mesh);
-      hazardMeshes.push({mesh,type:'spinner',x:h.x,z:h.z,rot:0});
-    } else if(h.type==='pit') {
-      // Pit indicator (can't actually make hole in THREE plane easily, just visual)
-      const geo=new THREE.PlaneGeometry(1.5,1.5);
-      const mat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.8});
-      const mesh=new THREE.Mesh(geo,mat);
-      mesh.rotation.x=-Math.PI/2; mesh.position.set(h.x,0.02,h.z);
-      arenaGroup.add(mesh);
-      // Glow border
-      const ring=new THREE.Mesh(new THREE.RingGeometry(0.75,0.9,16),new THREE.MeshBasicMaterial({color:0xff2200,side:THREE.DoubleSide}));
-      ring.rotation.x=-Math.PI/2; ring.position.set(h.x,0.03,h.z);
-      arenaGroup.add(ring);
-      hazardMeshes.push({mesh,type:'pit',x:h.x,z:h.z});
+  // Overhead cable frame
+  const cabMat=new THREE.MeshStandardMaterial({color:0x1a2a3a,roughness:.8,metalness:.6});
+  for(let i=-1;i<=1;i+=2){
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(ARENA_W+.5,.12,.12),cabMat);
+    beam.position.set(0,WALL_H+.1,i*(ARENA_H/4));scene.add(beam);
+    const beam2=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,ARENA_H+.5),cabMat);
+    beam2.position.set(i*(ARENA_W/4),WALL_H+.1,0);scene.add(beam2);
+    // Hanging lights
+    for(let j=-2;j<=2;j++){
+      const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,.15,6),new THREE.MeshBasicMaterial({color:0xffffcc}));
+      lamp.position.set(j*(ARENA_W/5),WALL_H,i*(ARENA_H/4));scene.add(lamp);
+      const lpt=new THREE.PointLight(0xffffaa,.4,8);
+      lpt.position.set(j*(ARENA_W/5),WALL_H-.2,i*(ARENA_H/4));scene.add(lpt);
     }
+  }
+
+  // Hazards
+  addHazards();
+}
+
+function addHazards(){
+  hazardMeshes=[];
+  const flamePos=[{x:-ARENA_W/4,z:0},{x:ARENA_W/4,z:0},{x:0,z:-ARENA_H/4},{x:0,z:ARENA_H/4}];
+  flamePos.forEach(h=>{
+    const pod=new THREE.Mesh(new THREE.CylinderGeometry(.3,.45,.25,8),new THREE.MeshStandardMaterial({color:0x3a2200,roughness:.3,metalness:.9}));
+    pod.position.set(h.x,.12,h.z);scene.add(pod);
+    const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(.12,.08,.12,6),new THREE.MeshStandardMaterial({color:0x556677,metalness:1,roughness:.1}));
+    nozzle.position.set(h.x,.25,h.z);scene.add(nozzle);
+    hazardMeshes.push({type:'flame',x:h.x,z:h.z,timer:Math.random()*3000,interval:4000+Math.random()*3000,active:false,activeTimer:0,mesh:pod});
   });
+
+  // Center spinner
+  const spinGeo=new THREE.CylinderGeometry(1.4,1.4,.1,20);
+  const spinMat=new THREE.MeshStandardMaterial({color:0x887700,metalness:1,roughness:.1,emissive:0x221100,emissiveIntensity:.3});
+  const spinMesh=new THREE.Mesh(spinGeo,spinMat);
+  spinMesh.position.set(0,.05,0);scene.add(spinMesh);
+  // Teeth on spinner
+  for(let i=0;i<6;i++){
+    const ang=i*Math.PI/3;
+    const tooth=new THREE.Mesh(new THREE.BoxGeometry(.3,.12,.15),new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:1,roughness:.1}));
+    tooth.position.set(Math.cos(ang)*1.3,.1,Math.sin(ang)*1.3);
+    tooth.rotation.y=-ang;
+    spinMesh.add(tooth);
+  }
+  hazardMeshes.push({type:'spinner',x:0,z:0,mesh:spinMesh,rot:0});
 }
 
 // =====================================================
-// ROBOT BUILDER
+// ROBOT BUILDER — detailed multi-part geometry
 // =====================================================
-function buildRobotFromParts(parts, color1, color2, isPlayer) {
-  const group = new THREE.Group();
-  const stats = {hp:100, armor:50, speed:60, damage:20, power:60, weight:20, weapons:[]};
-  
-  // Calculate stats
-  parts.forEach(p=>{
-    const c=getComp(p.compId); if(!c) return;
-    if(c.hp){stats.hp=c.hp; stats.armor=c.armor;}
-    if(c.speed){stats.speed=Math.max(stats.speed,c.speed); stats.power+=c.power;}
-    if(c.damage){stats.damage+=c.damage; stats.weapons.push({...c,cooldown:c.cooldown||1000});}
-    if(c.armor&&!c.hp) stats.armor+=c.armor;
-    stats.weight+=c.weight;
+function buildRobotFromParts(parts, color1, color2, isPlayer){
+  const group=new THREE.Group();
+  const stats=calcStatsFromParts(parts);
+
+  const c1=new THREE.Color(color1);
+  const c2=new THREE.Color(color2);
+  const chassisId=parts.find(p=>getComp(p.compId)&&getComp(p.compId).hp)?getComp(parts.find(p=>getComp(p.compId)&&getComp(p.compId).hp).compId).id:'ch_box';
+  const driveId=parts.find(p=>getComp(p.compId)&&getComp(p.compId).speed)?getComp(parts.find(p=>getComp(p.compId)&&getComp(p.compId).speed).compId).id:'dr_wheel_lg';
+
+  // --- MAIN HULL ---
+  const hullMat=new THREE.MeshStandardMaterial({color:c1,roughness:.45,metalness:.85});
+  const topPanelMat=new THREE.MeshStandardMaterial({color:c1.clone().lerp(new THREE.Color(0x888888),.25),roughness:.3,metalness:.95});
+  const accentMat=new THREE.MeshStandardMaterial({color:c2,roughness:.2,metalness:1.0,emissive:c2,emissiveIntensity:.08});
+  const darkMat=new THREE.MeshStandardMaterial({color:0x111111,roughness:.9,metalness:.1});
+  const chromeMat=new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.1,metalness:1.0});
+
+  let hullW=1.6,hullH=.52,hullD=1.4;
+  if(chassisId==='ch_lowrider'){hullH=.32;hullW=1.9;hullD=1.5;}
+  if(chassisId==='ch_heavy'||chassisId==='ch_titanium'){hullW=1.7;hullH=.6;hullD=1.5;}
+  if(chassisId==='ch_compact'){hullW=1.2;hullH=.45;hullD=1.1;}
+
+  // Main hull body
+  const hull=new THREE.Mesh(new THREE.BoxGeometry(hullW,hullH,hullD),hullMat);
+  hull.castShadow=true;group.add(hull);
+
+  // Wedge plow if ch_wedge
+  if(chassisId==='ch_wedge'){
+    const plowGeo=new THREE.BufferGeometry();
+    const hw=hullW/2,hh=hullH/2,hd=hullD/2;
+    const verts=new Float32Array([
+      -hw,-hh,hd,   hw,-hh,hd,   hw,hh,hd,   -hw,hh,hd,   // front
+      -hw,-hh,-hd,  hw,-hh,-hd,  hw,-hh+.05,hd, -hw,-hh+.05,hd, // bottom wedge
+    ]);
+    // Actually just add a slanted front plate
+    const plowMat=new THREE.MeshStandardMaterial({color:c1.clone().lerp(new THREE.Color(0xffffff),.1),roughness:.3,metalness:.95});
+    const plow=new THREE.Mesh(new THREE.BoxGeometry(hullW+.05,.08,hullD*.4),plowMat);
+    plow.position.set(0,-hullH/2+.04,hullD/2-.05);
+    plow.rotation.x=Math.PI*.12;
+    group.add(plow);
+  }
+
+  // Top armour panels (2 panels with gap)
+  const panelW=(hullW/2-.08);
+  const panel1=new THREE.Mesh(new THREE.BoxGeometry(panelW,.06,hullD-.1),topPanelMat);
+  panel1.position.set(-hullW/4+.02,hullH/2+.03,0);panel1.castShadow=true;group.add(panel1);
+  const panel2=panel1.clone();panel2.position.x=hullW/4-.02;group.add(panel2);
+
+  // Central spine ridge
+  const spine=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,hullD-.05),topPanelMat);
+  spine.position.y=hullH/2+.05;spine.castShadow=true;group.add(spine);
+
+  // Accent stripes on sides
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.04,.18,hullD*.7),accentMat);
+  stripe.position.set(-hullW/2-.02,.05,0);group.add(stripe);
+  const stripe2=stripe.clone();stripe2.position.x=hullW/2+.02;group.add(stripe2);
+
+  // Side vents (pairs of slits)
+  const ventMat=new THREE.MeshStandardMaterial({color:0x050810,roughness:.9,metalness:.1});
+  for(let vi=0;vi<3;vi++){
+    const vz=-.25+vi*.25;
+    const vent=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.1),ventMat);
+    vent.position.set(-hullW/2-.01,-.05,vz);group.add(vent);
+    const vent2=vent.clone();vent2.position.x=hullW/2+.01;group.add(vent2);
+  }
+
+  // Front grille
+  const grilleMat=new THREE.MeshStandardMaterial({color:0x070c12,roughness:.8,metalness:.3});
+  for(let gi=0;gi<4;gi++){
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(hullW*.6,.04,.04),grilleMat);
+    bar.position.set(0,-.15+gi*.1,hullD/2+.01);group.add(bar);
+  }
+
+  // LED strip (front glow)
+  const ledGeo=new THREE.BoxGeometry(hullW*.8,.05,.04);
+  const ledMat=new THREE.MeshStandardMaterial({color:c2,emissive:c2,emissiveIntensity:.8,roughness:.1,metalness:.0});
+  const led=new THREE.Mesh(ledGeo,ledMat);
+  led.position.set(0,hullH*.3,hullD/2+.01);group.add(led);
+  // LED rear
+  const led2=led.clone();led2.position.z=-hullD/2-.01;group.add(led2);
+
+  // Rivets/bolts
+  const boltMat=new THREE.MeshStandardMaterial({color:0x999999,roughness:.2,metalness:1});
+  const boltPositions=[[-hullW/2+.15,hullH/2+.04,-hullD/2+.15],[hullW/2-.15,hullH/2+.04,-hullD/2+.15],
+                       [-hullW/2+.15,hullH/2+.04,hullD/2-.15],[hullW/2-.15,hullH/2+.04,hullD/2-.15]];
+  boltPositions.forEach(([bx,by,bz])=>{
+    const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.06,6),boltMat);
+    bolt.position.set(bx,by,bz);group.add(bolt);
   });
 
-  // Chassis body - main rectangle
-  const chassisComp = parts.find(p=>getComp(p.compId)&&getComp(p.compId).hp);
-  const chassisType = chassisComp ? getComp(chassisComp.compId).id : 'ch_box';
+  // Exhaust pipes (rear)
+  if(chassisId!=='ch_lowrider'){
+    for(let ei=0;ei<2;ei++){
+      const ex=new THREE.Mesh(new THREE.CylinderGeometry(.06,.04,.18,8),chromeMat);
+      ex.rotation.x=Math.PI/2;
+      ex.position.set(-.2+ei*.4,hullH*.2,-hullD/2-.09);group.add(ex);
+      // Inner dark
+      const exIn=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.2,8),darkMat);
+      exIn.rotation.x=Math.PI/2;exIn.position.set(-.2+ei*.4,hullH*.2,-hullD/2-.1);group.add(exIn);
+    }
+  }
 
-  let chassisGeo;
-  if(chassisType==='ch_wedge') {
-    // Custom wedge geometry
-    chassisGeo = createWedgeGeometry(1.6, 0.5, 1.2);
-  } else if(chassisType==='ch_lowrider') {
-    chassisGeo = new THREE.BoxGeometry(1.8, 0.3, 1.4);
-  } else if(chassisType==='ch_drum' || chassisType==='ch_hex') {
-    chassisGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.6, 8);
+  // Top sensor dome
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(.12,.10,.8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0x88aabb,roughness:.05,metalness:.3,transparent:true,opacity:.7}));
+  dome.position.set(0,hullH/2+.1,-.1);group.add(dome);
+
+  // --- DRIVE SYSTEM ---
+  group.userData.wheelMeshes=[];
+  const hasTracks=driveId==='dr_track'||driveId==='dr_hydraulic';
+  if(hasTracks){
+    buildTracks(group,hullW,hullH,hullD,c1,c2,darkMat,accentMat);
   } else {
-    chassisGeo = new THREE.BoxGeometry(1.5, 0.55, 1.3);
+    buildWheels(group,hullW,hullH,hullD,c1,c2,driveId,darkMat,chromeMat);
   }
 
-  const chassisMat = new THREE.MeshStandardMaterial({color:new THREE.Color(color1),roughness:0.5,metalness:0.8});
-  const chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
-  chassisMesh.castShadow=true;
-  group.add(chassisMesh);
+  // --- WEAPONS ---
+  group.userData.spinnerMeshes=[];
+  group.userData.flipperMesh=null;
+  group.userData.axeMesh=null;
+  group.userData.axeHead=null;
+  group.userData.hammerMesh=null;
 
-  // Top panel
-  const topGeo = new THREE.BoxGeometry(1.3, 0.1, 1.1);
-  const topMat = new THREE.MeshStandardMaterial({color:new THREE.Color(color2),roughness:0.4,metalness:0.9});
-  const topMesh = new THREE.Mesh(topGeo, topMat);
-  topMesh.position.y = 0.32;
-  topMesh.castShadow=true;
-  group.add(topMesh);
-
-  // Init userData BEFORE adding weapons so spinnerMeshes/flipperMesh exist
-  group.userData.spinnerMeshes = [];
-  group.userData.flipperMesh = null;
-
-  // Add wheels/tracks
-  const hasTracks = parts.some(p=>p.compId==='dr_track_l'||p.compId==='dr_track_r');
-  if(hasTracks) {
-    addTracks(group, color1, color2);
-  } else {
-    addWheels(group, color1, color2, stats.speed);
+  const weapPart=parts.find(p=>getComp(p.compId)&&getComp(p.compId).damage);
+  if(weapPart){
+    buildWeapon(group,getComp(weapPart.compId),c1,c2,hullW,hullH,hullD,accentMat,chromeMat,darkMat);
   }
 
-  // Add weapons
-  const weaponParts = parts.filter(p=>getComp(p.compId)&&getComp(p.compId).damage);
-  weaponParts.forEach((wp,i)=>{
-    const wc = getComp(wp.compId);
-    addWeaponMesh(group, wc, color1, color2, i);
-  });
-
-  // Add armor plates
-  const armorParts = parts.filter(p=>getComp(p.compId)&&getComp(p.compId).armor&&!getComp(p.compId).hp);
-  if(armorParts.length>0) {
-    const plateMat=new THREE.MeshStandardMaterial({color:darkenColorHex(color1,0.2),roughness:0.3,metalness:0.95});
-    // Side plates
-    const plateGeo=new THREE.BoxGeometry(0.08,0.4,1.0);
-    const lp=new THREE.Mesh(plateGeo,plateMat);lp.position.set(-0.82,0,0);group.add(lp);
-    const rp=lp.clone();rp.position.set(0.82,0,0);group.add(rp);
+  // --- ARMOUR SKIRTS ---
+  const armPart=parts.find(p=>getComp(p.compId)&&getComp(p.compId).armor&&!getComp(p.compId).hp);
+  if(armPart){
+    buildArmorSkirts(group,hullW,hullH,hullD,c1,c2,getComp(armPart.compId));
   }
 
-  // Number decal (tiny panel)
-  const numMat=new THREE.MeshBasicMaterial({color:new THREE.Color(color2)});
-  const numGeo=new THREE.PlaneGeometry(0.25,0.12);
-  const num=new THREE.Mesh(numGeo,numMat);
-  num.position.set(0,0.38,0.56); group.add(num);
-
-  // Physics body
-  const physBody = new CANNON.Body({mass: stats.weight, linearDamping:0.15, angularDamping:0.9, allowSleep:false});
-  physBody.addShape(new CANNON.Box(new CANNON.Vec3(0.75,0.28,0.65)));
-  // Lock pitch and roll so the robot can only rotate on Y axis (no flipping)
+  // --- PHYSICS ---
+  const physBody=new CANNON.Body({mass:stats.weight,linearDamping:.18,angularDamping:.92,allowSleep:false});
+  physBody.addShape(new CANNON.Box(new CANNON.Vec3(hullW/2,.28,hullD/2)));
   world.addBody(physBody);
 
-  group.userData.physBody = physBody;
-  group.userData.stats = stats;
-  group.userData.currentHp = stats.hp;
-  group.userData.isPlayer = isPlayer;
+  group.userData.physBody=physBody;
+  group.userData.stats=stats;
+  group.userData.currentHp=stats.hp;
+  group.userData.isPlayer=isPlayer;
+  group.userData.hullMesh=hull;
+  group.userData.damageLevel=0; // 0=pristine,1=damaged,2=critical
 
   scene.add(group);
   return group;
 }
 
-function createWedgeGeometry(w, h, d) {
-  const geo = new THREE.BufferGeometry();
-  const hw=w/2, hh=h/2, hd=d/2;
-  const vertices = new Float32Array([
-    // Bottom face
-    -hw,-hh,-hd, hw,-hh,-hd, hw,-hh,hd, -hw,-hh,hd,
-    // Top face (angled - front lower)
-    -hw,hh,hd, hw,hh,hd, hw,-hh,-hd, -hw,-hh,-hd,
-  ]);
-  // Simple box fallback for now
-  return new THREE.BoxGeometry(w,h,d);
-}
+function buildWheels(group,hw,hh,hd,c1,c2,driveId,darkMat,chromeMat){
+  const c1col=new THREE.Color(c1);
+  const c2col=new THREE.Color(c2);
+  const isXL=driveId==='dr_wheel_xl';
+  const isSmall=driveId==='dr_wheel_sm';
+  const r=isXL?.34:isSmall?.2:.28;
+  const thickness=isXL?.22:isSmall?.14:.17;
 
-function addWheels(group, c1, c2, speed) {
-  const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12);
-  const wheelMat = new THREE.MeshStandardMaterial({color:0x111111,roughness:0.9,metalness:0.2});
-  const hubMat = new THREE.MeshStandardMaterial({color:new THREE.Color(c2),roughness:0.4,metalness:0.9});
-  const positions = [[-0.82,-.18,-.45],[0.82,-.18,-.45],[-0.82,-.18,.45],[0.82,-.18,.45]];
+  const tyreMat=new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:.95,metalness:.05});
+  const rimMat=new THREE.MeshStandardMaterial({color:c2col,roughness:.15,metalness:.95});
+  const hubMat=new THREE.MeshStandardMaterial({color:0x333333,roughness:.3,metalness:.8});
+
+  const positions=[[-hw/2-.06,-(hh*.5-.0),-.38],[hw/2+.06,-(hh*.5-.0),-.38],[-hw/2-.06,-(hh*.5-.0),.38],[hw/2+.06,-(hh*.5-.0),.38]];
   positions.forEach(([x,y,z])=>{
-    const wg=group.children.length;
-    const w=new THREE.Mesh(wheelGeo,wheelMat);
-    w.rotation.z=Math.PI/2; w.position.set(x,y,z);
-    w.castShadow=true; group.add(w);
-    // Hub
-    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.22,8),hubMat);
-    hub.rotation.z=Math.PI/2; hub.position.set(x,y,z);
-    group.add(hub);
+    // Tyre
+    const tyre=new THREE.Mesh(new THREE.CylinderGeometry(r,r,thickness,16),tyreMat);
+    tyre.rotation.z=Math.PI/2;tyre.position.set(x,y,z);tyre.castShadow=true;group.add(tyre);
+    // Tyre treads
+    for(let t=0;t<10;t++){
+      const tread=new THREE.Mesh(new THREE.BoxGeometry(thickness+.04,.05,.04),new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.95,metalness:.0}));
+      tread.rotation.z=Math.PI/2;
+      const ang=t/10*Math.PI*2;
+      tread.position.set(x,y+Math.sin(ang)*r,z+Math.cos(ang)*r);
+      tread.rotation.x=ang;group.add(tread);
+    }
+    // Rim
+    const rim=new THREE.Mesh(new THREE.CylinderGeometry(r*.72,r*.72,thickness+.02,8),rimMat);
+    rim.rotation.z=Math.PI/2;rim.position.set(x,y,z);group.add(rim);
+    // Spokes
+    for(let s=0;s<4;s++){
+      const sAng=s*Math.PI/2;
+      const spoke=new THREE.Mesh(new THREE.BoxGeometry(thickness+.03,.055,r*.55),rimMat);
+      spoke.rotation.z=Math.PI/2;spoke.rotation.x=sAng;
+      spoke.position.set(x,y+Math.sin(sAng)*r*.4,z+Math.cos(sAng)*r*.4);
+      group.add(spoke);
+    }
+    // Hub cap
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(r*.22,r*.22,thickness+.04,8),hubMat);
+    hub.rotation.z=Math.PI/2;hub.position.set(x,y,z);group.add(hub);
+    // Center bolt
+    const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,thickness+.06,6),chromeMat);
+    bolt.rotation.z=Math.PI/2;bolt.position.set(x,y,z);group.add(bolt);
+
+    group.userData.wheelMeshes.push(tyre);
   });
 }
 
-function addTracks(group, c1, c2) {
-  const trackMat=new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:0.95,metalness:0.1});
-  const trackGeo=new THREE.BoxGeometry(0.22,0.18,1.3);
-  [-0.82,0.82].forEach(x=>{
-    const t=new THREE.Mesh(trackGeo,trackMat);
-    t.position.set(x,-0.19,0); t.castShadow=true; group.add(t);
-    // Track detail
-    const linkMat=new THREE.MeshStandardMaterial({color:0x333333,roughness:0.8,metalness:0.5});
-    for(let i=0;i<6;i++){
-      const link=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.06,0.16),linkMat);
-      link.position.set(x,-0.11,-0.55+i*0.22);
+function buildTracks(group,hw,hh,hd,c1,c2,darkMat,accentMat){
+  const c1col=new THREE.Color(c1);
+  const trackBodyMat=new THREE.MeshStandardMaterial({color:0x0d0d0d,roughness:.95,metalness:.05});
+  const trackLinkMat=new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.8,metalness:.5});
+  const sprocketMat=new THREE.MeshStandardMaterial({color:c1col,roughness:.3,metalness:.9});
+
+  [-hw/2-.1,hw/2+.1].forEach(x=>{
+    // Track housing
+    const housing=new THREE.Mesh(new THREE.BoxGeometry(.22,.22,hd+.3),trackBodyMat);
+    housing.position.set(x,-(hh/2+.02),0);housing.castShadow=true;group.add(housing);
+    // Track links
+    const linkCount=12;
+    for(let l=0;l<linkCount;l++){
+      const link=new THREE.Mesh(new THREE.BoxGeometry(.26,.07,.12),trackLinkMat);
+      link.position.set(x,-(hh/2+.13),-(hd/2+.15)+l*((hd+.3)/linkCount));
       group.add(link);
     }
+    // Drive sprocket (rear)
+    const sprocket=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.26,8),sprocketMat);
+    sprocket.rotation.z=Math.PI/2;sprocket.position.set(x,-(hh/2+.02),-(hd/2+.05));group.add(sprocket);
+    // Idler (front)
+    const idler=sprocket.clone();idler.position.z=hd/2+.05;group.add(idler);
+
+    group.userData.wheelMeshes.push(housing);
   });
 }
 
-function addWeaponMesh(group, wc, c1, c2, idx) {
-  if(!wc) return;
-  const wMat=new THREE.MeshStandardMaterial({color:new THREE.Color(c2),roughness:0.3,metalness:0.95,emissive:new THREE.Color(c2),emissiveIntensity:0.05});
-  
-  if(wc.type==='spinner'||wc.type==='vspinner') {
-    const sGeo=new THREE.CylinderGeometry(0.55,0.55,0.1,16);
-    const sMesh=new THREE.Mesh(sGeo,wMat);
-    sMesh.position.set(0,0.4,-(idx*0.2));
-    sMesh.castShadow=true;
-    group.add(sMesh);
-    // Teeth
-    const toothMat=new THREE.MeshStandardMaterial({color:0xaaaaaa,roughness:0.2,metalness:1.0});
-    for(let t=0;t<3;t++){
-      const ang=t*Math.PI*2/3;
-      const tooth=new THREE.Mesh(new THREE.BoxGeometry(0.15,0.12,0.08),toothMat);
-      tooth.position.set(Math.cos(ang)*0.52,0.4,Math.sin(ang)*0.52-(idx*0.2));
-      tooth.rotation.y=-ang;
-      group.add(tooth);
-      sMesh.userData.teeth = sMesh.userData.teeth||[];
-      sMesh.userData.teeth.push(tooth);
+function buildWeapon(group,wc,c1,c2,hw,hh,hd,accentMat,chromeMat,darkMat){
+  const c2col=new THREE.Color(c2);
+  const weapMat=new THREE.MeshStandardMaterial({color:c2col,roughness:.2,metalness:1.0,emissive:c2col,emissiveIntensity:.05});
+  const bladeMat=new THREE.MeshStandardMaterial({color:0xdddddd,roughness:.1,metalness:1.0});
+  const toothMat=new THREE.MeshStandardMaterial({color:0xbbbbbb,roughness:.05,metalness:1.0});
+
+  if(wc.type==='spinner'||wc.type==='vspinner'||wc.type==='drum'){
+    // Spinner motor housing
+    const motorHousing=new THREE.Mesh(new THREE.CylinderGeometry(.2,.25,.18,8),new THREE.MeshStandardMaterial({color:0x222222,roughness:.3,metalness:.9}));
+    motorHousing.position.set(0,hh/2+.18,hd*.2);group.add(motorHousing);
+
+    const isVertical=wc.type==='vspinner';
+    const isDrum=wc.type==='drum';
+
+    let disc;
+    if(isDrum){
+      disc=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,hw*.85,20),weapMat);
+      disc.rotation.z=Math.PI/2;disc.position.set(0,hh/2+.1,hd/2+.05);
+    } else if(isVertical){
+      disc=new THREE.Mesh(new THREE.CylinderGeometry(.52,.52,.09,20),weapMat);
+      disc.rotation.x=Math.PI/2;disc.position.set(0,hh/2+.28,hd/2-.1);
+    } else {
+      disc=new THREE.Mesh(new THREE.CylinderGeometry(.55,.55,.09,20),weapMat);
+      disc.position.set(0,hh/2+.24,hd*.2);
     }
-    group.userData.spinnerMeshes.push(sMesh);
-  } else if(wc.type==='flipper') {
-    const fGeo=new THREE.BoxGeometry(1.1,0.08,0.5);
-    const fMesh=new THREE.Mesh(fGeo,wMat);
-    fMesh.position.set(0,0.3,0.75);
-    fMesh.castShadow=true;
-    group.add(fMesh);
-    group.userData.flipperMesh=fMesh;
-  } else if(wc.type==='axe'||wc.type==='hammer') {
-    const aGeo=new THREE.BoxGeometry(0.08,0.6,0.08);
-    const aMesh=new THREE.Mesh(aGeo,wMat);
-    aMesh.position.set(0,0.6,0.6);
-    group.add(aMesh);
-    const head=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.15,0.2),wMat);
-    head.position.set(0,0.9,0.6);
-    group.add(head);
-    group.userData.axeMesh=aMesh;
-    group.userData.axeHead=head;
-  } else if(wc.type==='drum') {
-    const dGeo=new THREE.CylinderGeometry(0.35,0.35,1.0,12);
-    const dMesh=new THREE.Mesh(dGeo,wMat);
-    dMesh.rotation.z=Math.PI/2; dMesh.position.set(0,0.25,0.75);
-    dMesh.castShadow=true; group.add(dMesh);
-    group.userData.spinnerMeshes.push(dMesh);
-  } else if(wc.type==='saw') {
-    const sGeo=new THREE.CylinderGeometry(0.3,0.3,0.05,16);
-    const sMesh=new THREE.Mesh(sGeo,wMat);
-    sMesh.rotation.x=Math.PI/2; sMesh.position.set(0,0.2,0.8);
-    group.add(sMesh);
-    group.userData.spinnerMeshes.push(sMesh);
+    group.add(disc);
+
+    // Teeth on disc/drum
+    const teethCount=isDrum?8:6;
+    for(let t=0;t<teethCount;t++){
+      const ang=t/teethCount*Math.PI*2;
+      const tooth=new THREE.Mesh(new THREE.BoxGeometry(isDrum?.1:.14,isDrum?.18:.12,isDrum?.08:.07),toothMat);
+      if(isDrum){
+        tooth.position.set(Math.cos(ang)*(.38+.09),hh/2+.1,hd/2+.05+Math.sin(ang)*(.38+.09));
+        tooth.rotation.z=ang;
+      } else {
+        tooth.position.set(Math.cos(ang)*.52,hh/2+.24+(isVertical?.14:0),hd*.2+Math.sin(ang)*(isVertical?.52:.52));
+        tooth.rotation.y=-ang;
+      }
+      disc.add(tooth);
+    }
+
+    // Axle
+    const axle=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,hw*.9+.1,8),chromeMat);
+    axle.rotation.z=Math.PI/2;
+    if(isDrum){axle.position.set(0,hh/2+.1,hd/2+.05);}
+    else{axle.position.set(0,hh/2+.24,hd*.2);}
+    group.add(axle);
+
+    group.userData.spinnerMeshes.push(disc);
+
+  } else if(wc.type==='flipper'){
+    // Pneumatic arm base
+    const armBase=new THREE.Mesh(new THREE.BoxGeometry(hw*.75,.1,.35),new THREE.MeshStandardMaterial({color:0x222222,roughness:.3,metalness:.9}));
+    armBase.position.set(0,hh/2+.05,hd/2-.12);group.add(armBase);
+
+    // Flipper plate (pivot at back)
+    const flipGroup=new THREE.Group();
+    flipGroup.position.set(0,hh/2+.06,hd/2-.12);
+    group.add(flipGroup);
+
+    const flipPlate=new THREE.Mesh(new THREE.BoxGeometry(hw*.9,.07,.55),weapMat);
+    flipPlate.position.set(0,0,.28);
+    flipGroup.add(flipPlate);
+
+    // Scoop lip
+    const lip=new THREE.Mesh(new THREE.BoxGeometry(hw*.88,.12,.06),bladeMat);
+    lip.position.set(0,.06,.55);flipGroup.add(lip);
+
+    // Hinge pins
+    for(let hi=-1;hi<=1;hi+=2){
+      const pin=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.1,6),chromeMat);
+      pin.rotation.z=Math.PI/2;pin.position.set(hi*(hw*.35),0,0);flipGroup.add(pin);
+    }
+
+    // Pneumatic piston
+    const piston=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.3,6),chromeMat);
+    piston.rotation.x=Math.PI/2;piston.position.set(0,.1,.1);group.add(piston);
+
+    group.userData.flipperMesh=flipGroup;
+
+  } else if(wc.type==='axe'||wc.type==='hammer'){
+    // Arm pivot mount
+    const mount=new THREE.Mesh(new THREE.BoxGeometry(.25,.15,.2),new THREE.MeshStandardMaterial({color:0x333333,roughness:.3,metalness:.9}));
+    mount.position.set(0,hh/2+.07,hd*.25);group.add(mount);
+
+    const armGroup=new THREE.Group();
+    armGroup.position.set(0,hh/2+.07,hd*.25);
+    group.add(armGroup);
+
+    // Arm shaft
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,.65,8),weapMat);
+    shaft.position.set(0,.32,0);shaft.castShadow=true;armGroup.add(shaft);
+
+    // Axe/hammer head
+    if(wc.type==='axe'){
+      const headMat=bladeMat;
+      const head=new THREE.Mesh(new THREE.BoxGeometry(.38,.18,.12),headMat);
+      head.position.set(0,.67,0);armGroup.add(head);
+      // Spike
+      const spike=new THREE.Mesh(new THREE.ConeGeometry(.06,.2,8),bladeMat);
+      spike.position.set(0,.79,-.07);spike.rotation.x=Math.PI*.4;armGroup.add(spike);
+    } else {
+      const head=new THREE.Mesh(new THREE.BoxGeometry(.42,.15,.25),weapMat);
+      head.position.set(0,.67,0);armGroup.add(head);
+      const face=new THREE.Mesh(new THREE.BoxGeometry(.4,.22,.06),bladeMat);
+      face.position.set(0,.67,.13);armGroup.add(face);
+    }
+
+    // Hinge
+    const hinge=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.28,8),chromeMat);
+    hinge.rotation.z=Math.PI/2;hinge.position.set(0,0,0);armGroup.add(hinge);
+    // Piston
+    const piston=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.4,6),chromeMat);
+    piston.rotation.x=-.7;piston.position.set(.16,.25,.1);group.add(piston);
+
+    group.userData.axeMesh=armGroup;
+
+  } else if(wc.type==='clamp'){
+    // Two-jaw clamp
+    const baseBlock=new THREE.Mesh(new THREE.BoxGeometry(hw*.6,.12,.3),weapMat);
+    baseBlock.position.set(0,hh/2+.06,hd/2+.05);group.add(baseBlock);
+    // Jaws
+    [-1,1].forEach(side=>{
+      const jawGroup=new THREE.Group();
+      jawGroup.position.set(side*(hw*.22),hh/2+.06,hd/2+.1);
+      group.add(jawGroup);
+      const jaw=new THREE.Mesh(new THREE.BoxGeometry(.12,.06,.35),weapMat);
+      jaw.position.set(0,0,.18);jawGroup.add(jaw);
+      const tip=new THREE.Mesh(new THREE.ConeGeometry(.06,.12,6),bladeMat);
+      tip.rotation.x=Math.PI/2;tip.position.set(0,0,.38);jawGroup.add(tip);
+      if(side===-1) group.userData.clampL=jawGroup;
+      else group.userData.clampR=jawGroup;
+    });
+
   } else {
-    // Generic weapon
-    const gGeo=new THREE.BoxGeometry(0.8,0.1,0.4);
-    const gMesh=new THREE.Mesh(gGeo,wMat);
-    gMesh.position.set(0,0.35,0.75);
-    gMesh.castShadow=true; group.add(gMesh);
+    // Generic weapon bar
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(hw*.7,.09,.4),weapMat);
+    bar.position.set(0,hh/2+.08,hd/2+.02);group.add(bar);
+    const edge=new THREE.Mesh(new THREE.BoxGeometry(hw*.68,.14,.05),bladeMat);
+    edge.position.set(0,hh/2+.1,hd/2+.23);group.add(edge);
   }
 }
 
-function darkenColorHex(hex, amt) {
-  try {
-    const n=parseInt(hex.replace('#',''),16);
-    const r=Math.max(0,((n>>16)&0xff)-Math.round(amt*255));
-    const g=Math.max(0,((n>>8)&0xff)-Math.round(amt*255));
-    const b=Math.max(0,(n&0xff)-Math.round(amt*255));
-    return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
-  } catch(e){ return hex; }
+function buildArmorSkirts(group,hw,hh,hd,c1,c2,armorComp){
+  const skirtMat=new THREE.MeshStandardMaterial({color:new THREE.Color(c1).lerp(new THREE.Color(0x333333),.3),roughness:.3,metalness:.95});
+  const trim=new THREE.MeshStandardMaterial({color:new THREE.Color(c2),roughness:.2,metalness:1,emissive:new THREE.Color(c2),emissiveIntensity:.03});
+
+  // Side skirts
+  const skirtH=hh*.8;
+  [-hw/2-.14,hw/2+.14].forEach(x=>{
+    const skirt=new THREE.Mesh(new THREE.BoxGeometry(.1,skirtH,hd+.2),skirtMat);
+    skirt.position.set(x,-hh*.1,0);group.add(skirt);
+    const trimBar=new THREE.Mesh(new THREE.BoxGeometry(.12,.04,hd+.22),trim);
+    trimBar.position.set(x,-hh*.1+skirtH/2+.02,0);group.add(trimBar);
+  });
+  // Front/rear skirts
+  [hd/2+.12,-(hd/2+.12)].forEach(z=>{
+    const sk=new THREE.Mesh(new THREE.BoxGeometry(hw+.3,skirtH*.7,.08),skirtMat);
+    sk.position.set(0,-hh*.15,z);group.add(sk);
+  });
 }
 
-function spawnRobots() {
-  // Player parts
-  const playerParts = placedParts.length>0 ? placedParts : [{compId:'ch_box',gridX:0,gridY:0},{compId:'dr_wheel_lg',gridX:0,gridY:0},{compId:'wp_flipper',gridX:0,gridY:0}];
+function calcStatsFromParts(parts){
+  let hp=300,armor=45,speed=60,damage=15,power=60,weight=18,weapons=[];
+  parts.forEach(({compId})=>{
+    const c=getComp(compId);if(!c)return;
+    weight+=c.weight;
+    if(c.hp){hp=c.hp;armor=c.armor||45;}
+    if(c.speed){speed=Math.max(speed,c.speed);power+=c.power;}
+    if(c.damage){damage+=c.damage;weapons.push({...c});}
+    if(c.armor&&!c.hp)armor+=c.armor;
+  });
+  return{hp,armor,speed,damage,power,weight,weapons};
+}
 
-  p1Robot = buildRobotFromParts(playerParts, botColor1, botColor2, true);
-  p1Robot.position.set(-6, 0.28, 0);
-  p1Robot.userData.physBody.position.set(-6, 0.28, 0);
+// =====================================================
+// SPAWN
+// =====================================================
+function spawnRobots(){
+  const playerParts=buildPlacedParts();
+  p1Robot=buildRobotFromParts(playerParts,botColor1,botColor2,true);
+  p1Robot.position.set(-6,.32,0);
+  p1Robot.userData.physBody.position.set(-6,.32,0);
 
-  // AI/opponent
-  const preset = AI_PRESETS[Math.floor(Math.random()*AI_PRESETS.length)];
-  const aiParts = preset.parts.map(p=>({...p, id:Math.random()}));
-  p2Robot = buildRobotFromParts(aiParts, preset.color1, preset.color2, false);
-  p2Robot.position.set(6, 0.28, 0);
-  p2Robot.userData.physBody.position.set(6, 0.28, 0);
-  p2Robot.rotation.y = Math.PI;
-  p2Robot.userData.physBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0), Math.PI);
+  const preset=AI_PRESETS[Math.floor(Math.random()*AI_PRESETS.length)];
+  const aiParts=Object.values(preset.sel).map(compId=>({compId}));
+  p2Robot=buildRobotFromParts(aiParts,preset.color1,preset.color2,false);
+  p2Robot.position.set(6,.32,0);
+  p2Robot.userData.physBody.position.set(6,.32,0);
+  p2Robot.rotation.y=Math.PI;
+  p2Robot.userData.physBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0,1,0),Math.PI);
 
-  // Init HP
-  p1hp = p1Robot.userData.stats.hp;
-  p2hp = p2Robot.userData.stats.hp;
-  p1armor = p1Robot.userData.stats.armor;
-  p2armor = p2Robot.userData.stats.armor;
+  p1hp=p1Robot.userData.stats.hp;
+  p2hp=p2Robot.userData.stats.hp;
+  p1armor=p1Robot.userData.stats.armor;
+  p2armor=p2Robot.userData.stats.armor;
 
-  document.getElementById('p1name').textContent = botName.toUpperCase();
-  document.getElementById('p2name').textContent = preset.name;
+  document.getElementById('p1name').textContent=botName.toUpperCase();
+  document.getElementById('p2name').textContent=preset.name;
 
   updateHpBars();
+}
+
+function buildWeaponHUD(){
+  const hud=document.getElementById('p1weapons');
+  hud.innerHTML='';
+  const stats=calcBotStats();
+  stats.weapons.forEach((w,i)=>{
+    const slot=document.createElement('div');
+    slot.className='weap-slot';
+    const key=['SPACE','Q','E'][i]||'?';
+    slot.innerHTML=`<div class="weap-icon-sm">${w.icon||'⚔'}</div><div class="weap-cd"><div class="weap-cd-fill" id="wcd${i}" style="width:100%"></div></div><div class="weap-key">${key}</div>`;
+    hud.appendChild(slot);
+  });
 }
 
 // =====================================================
 // GAME LOOP
 // =====================================================
-let lastTime = performance.now();
+let lastTime=performance.now();
+let physAccum=0;
+const PHYS_STEP=1/60;
 
-function startGameLoop() {
-  lastTime = performance.now();
-  function loop(t) {
-    frameId = requestAnimationFrame(loop);
-    const dt = Math.min((t-lastTime)/1000, 0.033);
-    lastTime = t;
-    if(gameRunning) {
-      updatePhysics(dt);
-      updateRobots(dt);
+function startGameLoop(){
+  lastTime=performance.now();
+  function loop(t){
+    frameId=requestAnimationFrame(loop);
+    const dt=Math.min((t-lastTime)/1000,.033);
+    lastTime=t;
+    if(gameRunning){
+      physAccum+=dt;
+      while(physAccum>=PHYS_STEP){world.step(PHYS_STEP);physAccum-=PHYS_STEP;}
+      processInput();
+      syncRobots();
+      updateRobotAnimations(dt);
       updateCamera(dt);
       updateHazards(dt);
       updateSparks(dt);
       checkCollisions();
       updateMinimap();
-      if(aiMode) updateAI(dt);
-      if(onlineMode && conn) syncOnline();
+      updateWeaponCooldownBars();
+      if(aiMode)updateAI(dt);
     }
-    renderer.render(scene, camera);
+    renderer.render(scene,camera);
   }
   requestAnimationFrame(loop);
 }
 
-const PHYS_STEP = 1/60;
-let physAccum = 0;
+function processInput(){
+  if(!p1Robot||!gameRunning)return;
+  const b=p1Robot.userData.physBody;
+  const stats=p1Robot.userData.stats;
+  const sm=stats.speed/60;
 
-function syncRobotMesh(robot) {
-  if(!robot) return;
-  const b = robot.userData.physBody;
-  // Force upright at fixed height - no tipping
-  b.position.y = 0.3;
-  b.velocity.y = 0;
-  b.quaternion.x = 0;
-  b.quaternion.z = 0;
-  const len = Math.sqrt(b.quaternion.y*b.quaternion.y + b.quaternion.w*b.quaternion.w);
-  if(len > 0) { b.quaternion.y /= len; b.quaternion.w /= len; }
-  robot.position.copy(b.position);
-  robot.quaternion.copy(b.quaternion);
+  const fw=keys['KeyW']||keys['ArrowUp']?1:keys['KeyS']||keys['ArrowDown']?-1:0;
+  const turn=keys['KeyA']||keys['ArrowLeft']?1:keys['KeyD']||keys['ArrowRight']?-1:0;
+  const topSpeed=7.5*sm, topTurn=2.8*sm;
 
-  // Arena bounds kill zone
-  const sp = b.position;
-  const outX = Math.abs(sp.x)>ARENA_W/2+1;
-  const outZ = Math.abs(sp.z)>ARENA_H/2+1;
-  if(outX||outZ) {
-    // Push back
-    if(outX) { b.position.x = Math.sign(sp.x)*(ARENA_W/2); b.velocity.x*=-0.5; }
-    if(outZ) { b.position.z = Math.sign(sp.z)*(ARENA_H/2); b.velocity.z*=-0.5; }
+  b.wakeUp();
+  if(fw!==0){
+    const a=getYaw(b.quaternion);
+    b.velocity.x=Math.sin(a)*fw*topSpeed;
+    b.velocity.z=Math.cos(a)*fw*topSpeed;
+  } else {
+    b.velocity.x*=.82;b.velocity.z*=.82;
   }
+  if(turn!==0){b.angularVelocity.y=turn*topTurn;}
+  else{b.angularVelocity.y*=.72;}
 }
 
-function updateRobots(dt) {
-  if(!p1Robot||!p2Robot) return;
-  // Spin spinners
-  p1Robot.userData.spinnerMeshes.forEach(s=>{ s.rotation.y += dt*20; });
-  p2Robot.userData.spinnerMeshes.forEach(s=>{ s.rotation.y += dt*15; });
-
-  // Update wheel rotation visual
-  updateWheelRotation(p1Robot, dt);
-  updateWheelRotation(p2Robot, dt);
+function syncRobots(){
+  [p1Robot,p2Robot].forEach(r=>{
+    if(!r)return;
+    const b=r.userData.physBody;
+    // Lock vertical & tilt — robots stay flat
+    b.position.y=.32;b.velocity.y=0;
+    b.quaternion.x=0;b.quaternion.z=0;
+    const l=Math.sqrt(b.quaternion.y*b.quaternion.y+b.quaternion.w*b.quaternion.w);
+    if(l>0){b.quaternion.y/=l;b.quaternion.w/=l;}
+    r.position.copy(b.position);
+    r.quaternion.copy(b.quaternion);
+    // Wall bounce
+    const sp=b.position;
+    if(Math.abs(sp.x)>ARENA_W/2-.5){b.position.x=Math.sign(sp.x)*(ARENA_W/2-.5);b.velocity.x*=-.4;}
+    if(Math.abs(sp.z)>ARENA_H/2-.5){b.position.z=Math.sign(sp.z)*(ARENA_H/2-.5);b.velocity.z*=-.4;}
+  });
 }
 
-function updateWheelRotation(robot, dt) {
-  const b=robot.userData.physBody;
-  const spd=b.velocity.length();
-  robot.children.forEach(c=>{
-    if(c.geometry && c.geometry.type==='CylinderGeometry' && c.geometry.parameters.radiusTop<0.32) {
-      c.rotation.x+=spd*dt*3;
+function updateRobotAnimations(dt){
+  if(!p1Robot||!p2Robot)return;
+
+  [p1Robot,p2Robot].forEach(r=>{
+    const b=r.userData.physBody;
+    const spd=Math.sqrt(b.velocity.x**2+b.velocity.z**2);
+
+    // Spin spinners proportional to their spin bursts + constant spin
+    r.userData.spinnerMeshes.forEach(s=>{
+      const burst=s.userData.spinBurst||0;
+      s.rotation.y+=dt*(15+burst*2);
+      s.rotation.x+=dt*(s.userData.drumSpin||0);
+      if(burst>0)s.userData.spinBurst=Math.max(0,burst-dt*30);
+    });
+
+    // Wheel rotation from movement
+    r.userData.wheelMeshes.forEach(w=>{
+      w.rotation.x+=spd*dt*3.5;
+    });
+
+    // Damage visual degradation
+    const hp=r.userData.isPlayer?p1hp:p2hp;
+    const maxHp=r.userData.stats.hp;
+    const pct=hp/maxHp;
+    if(pct<.5&&r.userData.damageLevel<1){
+      r.userData.damageLevel=1;
+      // Darken hull slightly
+      if(r.userData.hullMesh){
+        r.userData.hullMesh.material.roughness=.75;
+        r.userData.hullMesh.material.metalness=.5;
+        r.userData.hullMesh.material.needsUpdate=true;
+      }
+    }
+    if(pct<.2&&r.userData.damageLevel<2){
+      r.userData.damageLevel=2;
+      if(r.userData.hullMesh){
+        r.userData.hullMesh.material.color.multiplyScalar(.55);
+        r.userData.hullMesh.material.needsUpdate=true;
+      }
+      // Continuous smoke/spark emission
+      if(Math.random()<.15){
+        const wp=r.position.clone();wp.y=.8;
+        spawnSmoke(wp);
+      }
     }
   });
 }
 
-function updateCamera(dt) {
-  if(!p1Robot) return;
-  const pos = p1Robot.position;
-
-  if(cameraMode===0) {
-    // Follow camera behind player
-    const angle = p1Robot.rotation.y + Math.PI;
-    const tx = pos.x - Math.sin(angle)*10;
-    const tz = pos.z - Math.cos(angle)*10;
-    camera.position.x += (tx - camera.position.x)*0.08;
-    camera.position.z += (tz - camera.position.z)*0.08;
-    camera.position.y += (8 - camera.position.y)*0.08;
-    camera.lookAt(pos.x, pos.y+0.5, pos.z);
-  } else if(cameraMode===1) {
-    // Top down
-    camera.position.set(0, 22, 0.1);
-    camera.lookAt(0,0,0);
+function updateCamera(dt){
+  if(!p1Robot)return;
+  const pos=p1Robot.position;
+  if(cameraMode===0){
+    const a=p1Robot.rotation.y+Math.PI;
+    const tx=pos.x-Math.sin(a)*10,tz=pos.z-Math.cos(a)*10;
+    camera.position.x+=(tx-camera.position.x)*.07;
+    camera.position.z+=(tz-camera.position.z)*.07;
+    camera.position.y+=(8-camera.position.y)*.07;
+    camera.lookAt(pos.x,pos.y+.5,pos.z);
+  } else if(cameraMode===1){
+    camera.position.set(0,24,.1);camera.lookAt(0,0,0);
   } else {
-    // Free rotating
-    cameraAngle += dt*0.3;
-    camera.position.x = Math.sin(cameraAngle)*18;
-    camera.position.z = Math.cos(cameraAngle)*18;
-    camera.position.y = 12;
+    cameraAngle+=dt*.25;
+    camera.position.set(Math.sin(cameraAngle)*20,12,Math.cos(cameraAngle)*20);
     camera.lookAt(0,0,0);
   }
 }
 
-function updateHazards(dt) {
+// =====================================================
+// HAZARDS
+// =====================================================
+function updateHazards(dt){
   hazardMeshes.forEach(h=>{
-    if(h.type==='spinner') {
-      h.rot+=dt*3;
-      h.mesh.rotation.y=h.rot;
-      // Damage robots on spinner
+    if(h.type==='spinner'){
+      h.rot+=dt*2.5;h.mesh.rotation.y=h.rot;
       [p1Robot,p2Robot].forEach(r=>{
-        if(!r) return;
-        const dx=r.position.x-h.x, dz=r.position.z-h.z;
-        if(Math.sqrt(dx*dx+dz*dz)<1.5) {
-          applyDamage(r, 0.5);
+        if(!r)return;
+        const dx=r.position.x-h.x,dz=r.position.z-h.z;
+        if(Math.sqrt(dx*dx+dz*dz)<1.6){
+          // Very light hazard damage
+          if(Math.random()<.03)applyDamage(r,0.8);
         }
       });
-    } else if(h.type==='flame') {
+    } else if(h.type==='flame'){
       h.timer+=dt*1000;
-      if(h.timer>h.interval) {
-        h.timer=0;
-        h.active=true;
-        h.activeTimer=800;
-        // Flame light
-        const light=new THREE.PointLight(0xff6600,3,3);
-        light.position.set(h.x,1,h.z);
-        scene.add(light);
-        setTimeout(()=>scene.remove(light),800);
-        spawnFlame(h.x,h.z);
+      if(h.timer>h.interval){
+        h.timer=0;h.active=true;h.activeTimer=700;
+        h.interval=3500+Math.random()*3000;
+        const fl=new THREE.PointLight(0xff6600,4,4);
+        fl.position.set(h.x,1.2,h.z);scene.add(fl);
+        setTimeout(()=>scene.remove(fl),700);
+        spawnFlameEffect(h.x,h.z);
       }
-      if(h.active) {
+      if(h.active){
         h.activeTimer-=dt*1000;
-        if(h.activeTimer<0) h.active=false;
-        // Damage
+        if(h.activeTimer<0)h.active=false;
         [p1Robot,p2Robot].forEach(r=>{
-          if(!r) return;
-          const dx=r.position.x-h.x, dz=r.position.z-h.z;
-          if(Math.sqrt(dx*dx+dz*dz)<1.5) applyDamage(r,1);
+          if(!r)return;
+          const dx=r.position.x-h.x,dz=r.position.z-h.z;
+          if(Math.sqrt(dx*dx+dz*dz)<1.4&&Math.random()<.05)applyDamage(r,1.5);
         });
       }
     }
   });
 }
 
-function spawnFlame(x,z) {
-  for(let i=0;i<8;i++) {
-    sparks.push({
-      x:x/ARENA_W*window.innerWidth+window.innerWidth/2,
-      y:z/ARENA_H*window.innerHeight+window.innerHeight/2,
-      vx:(Math.random()-0.5)*4,
-      vy:-Math.random()*8-4,
-      life:1,
-      maxLife:1,
-      r:255, g:Math.floor(Math.random()*200),b:0,
-      size:4+Math.random()*4,
-      type:'flame'
-    });
-  }
-}
-
 // =====================================================
-// CONTROLS & COMBAT
+// WEAPONS
 // =====================================================
-function onKeyDown(e) {
+function onKeyDown(e){
   keys[e.code]=true;
-  if(e.code==='Space'){ e.preventDefault(); fireWeapon(p1Robot,'primary'); }
-  if(e.code==='KeyQ') fireWeapon(p1Robot,'flipper');
-  if(e.code==='KeyE') fireWeapon(p1Robot,'spinner');
-  if(e.code==='KeyC') cameraMode=(cameraMode+1)%3;
+  if(e.code==='Space'){e.preventDefault();fireWeapon(p1Robot,0);}
+  if(e.code==='KeyQ')fireWeapon(p1Robot,1);
+  if(e.code==='KeyE')fireWeapon(p1Robot,2);
+  if(e.code==='KeyC')cameraMode=(cameraMode+1)%3;
 }
-function onKeyUp(e) { keys[e.code]=false; }
+function onKeyUp(e){keys[e.code]=false;}
 
-const moveForce = 180;
-const turnForce = 6;
+function fireWeapon(robot,slot){
+  if(!robot||!gameRunning)return;
+  const stats=robot.userData.stats;
+  if(!stats.weapons||stats.weapons.length===0)return;
+  const w=stats.weapons[Math.min(slot,stats.weapons.length-1)];
+  if(!w)return;
 
-function updatePhysics(dt) {
-  physAccum += dt;
-  while(physAccum >= PHYS_STEP) {
-    world.step(PHYS_STEP);
-    physAccum -= PHYS_STEP;
-  }
-  // Player input
-  if(p1Robot && gameRunning) {
-    const b = p1Robot.userData.physBody;
-    const stats = p1Robot.userData.stats;
-    const speedMult = stats.speed/60;
-
-    const fw = keys['KeyW']||keys['ArrowUp']    ? 1 : (keys['KeyS']||keys['ArrowDown'] ? -1 : 0);
-    const turn = keys['KeyA']||keys['ArrowLeft'] ? 1 : (keys['KeyD']||keys['ArrowRight'] ? -1 : 0);
-
-    const topSpeed = 8 * speedMult;
-    const topTurn  = 3 * speedMult;
-    b.wakeUp();
-    if(fw!==0) {
-      const angle = getYaw(b.quaternion);
-      b.velocity.x = Math.sin(angle) * fw * topSpeed;
-      b.velocity.z = Math.cos(angle) * fw * topSpeed;
-    } else {
-      b.velocity.x *= 0.85;
-      b.velocity.z *= 0.85;
-    }
-    if(turn!==0) {
-      b.angularVelocity.y = turn * topTurn;
-    } else {
-      b.angularVelocity.y *= 0.75;
-    }
-  }
-
-  // Sync meshes
-  syncRobotMesh(p1Robot);
-  syncRobotMesh(p2Robot);
-}
-
-function getYaw(quat) {
-  return Math.atan2(2*(quat.w*quat.y+quat.x*quat.z),1-2*(quat.y*quat.y+quat.z*quat.z));
-}
-
-let weaponCDs = {};
-
-function fireWeapon(robot, slot) {
-  if(!robot||!gameRunning) return;
-  const stats = robot.userData.stats;
-  if(!stats.weapons||stats.weapons.length===0) return;
-
-  const now = Date.now();
-  const wIdx = slot==='flipper'?1:slot==='spinner'?2:0;
-  const w = stats.weapons[Math.min(wIdx,stats.weapons.length-1)];
-  if(!w) return;
-
-  const cdKey = (robot===p1Robot?'p1':'p2')+wIdx;
-  if(weaponCDs[cdKey] && now<weaponCDs[cdKey]) return;
-  weaponCDs[cdKey] = now + (w.cooldown||1000);
-
-  // Weapon activation
-  if(w.type==='flipper'||slot==='flipper') {
-    activateFlipper(robot);
-  } else if(w.type==='spinner'||w.type==='vspinner') {
-    activateSpinner(robot);
-  } else if(w.type==='axe'||w.type==='hammer') {
-    activateAxe(robot);
-  } else {
-    // Generic attack impulse
-    attackImpulse(robot);
-  }
-
-  updateWeaponCooldownUI();
-}
-
-function activateFlipper(robot) {
-  const fm = robot.userData.flipperMesh;
-  if(!fm) { attackImpulse(robot); return; }
-
-  // Animate flipper
-  const startRot = fm.rotation.x;
-  let t=0;
-  const anim=()=>{
-    t+=0.15;
-    fm.rotation.x = -Math.PI/3 * Math.sin(t);
-    if(t<Math.PI) requestAnimationFrame(anim);
-    else fm.rotation.x=0;
-  };
-  requestAnimationFrame(anim);
-
-  // Check contact with opponent
-  const other = robot===p1Robot?p2Robot:p1Robot;
-  if(other) {
-    const dist=robot.position.distanceTo(other.position);
-    if(dist<3) {
-      const strength = 20 + robot.userData.stats.damage;
-      const up = new CANNON.Vec3(0,strength,0);
-      const fwd = new CANNON.Vec3(-Math.sin(getYaw(robot.userData.physBody.quaternion))*strength*0.5,0,-Math.cos(getYaw(robot.userData.physBody.quaternion))*strength*0.5);
-      other.userData.physBody.applyImpulse(up,other.userData.physBody.position);
-      other.userData.physBody.applyImpulse(fwd,other.userData.physBody.position);
-      applyDamage(other, robot.userData.stats.damage*0.4);
-      spawnImpactSparks(other.position);
-    }
-  }
-}
-
-function activateSpinner(robot) {
-  robot.userData.spinnerMeshes.forEach(s=>{
-    // Burst spin
-    const orig=s.rotation.y;
-    s.userData.spinBurst = 50;
-  });
-  attackImpulse(robot);
-}
-
-function activateAxe(robot) {
-  const am=robot.userData.axeMesh||robot.userData.axeHead;
-  if(!am) { attackImpulse(robot); return; }
-  let t=0;
-  const anim=()=>{
-    t+=0.2;
-    const swing=Math.sin(t)*Math.PI*0.6;
-    if(robot.userData.axeMesh) robot.userData.axeMesh.rotation.x=swing;
-    if(robot.userData.axeHead) robot.userData.axeHead.rotation.x=swing;
-    if(t<Math.PI) requestAnimationFrame(anim);
-    else { if(robot.userData.axeMesh) robot.userData.axeMesh.rotation.x=0; if(robot.userData.axeHead) robot.userData.axeHead.rotation.x=0; }
-  };
-  requestAnimationFrame(anim);
+  const now=Date.now();
+  const cdKey=(robot===p1Robot?'p1':'p2')+slot;
+  if(weaponCDs[cdKey]&&now<weaponCDs[cdKey])return;
+  weaponCDs[cdKey]=now+(w.cooldown||1500);
 
   const other=robot===p1Robot?p2Robot:p1Robot;
-  if(other&&robot.position.distanceTo(other.position)<2.5) {
-    applyDamage(other, robot.userData.stats.damage*0.6);
-    spawnImpactSparks(other.position);
-    other.userData.physBody.applyImpulse(new CANNON.Vec3(0,8,0),other.userData.physBody.position);
-  }
+
+  if(w.type==='flipper'){activateFlipper(robot,other,w);}
+  else if(w.type==='spinner'||w.type==='vspinner'){activateSpinner(robot,w);}
+  else if(w.type==='drum'){activateDrum(robot,w);}
+  else if(w.type==='axe'||w.type==='hammer'){activateAxe(robot,other,w);}
+  else if(w.type==='clamp'){activateClamp(robot,other,w);}
+  else{genericAttack(robot,other,w);}
 }
 
-function attackImpulse(robot) {
-  const other=robot===p1Robot?p2Robot:p1Robot;
-  if(!other) return;
-  const dist=robot.position.distanceTo(other.position);
-  if(dist<3.5) {
+function activateFlipper(robot,other,w){
+  const fg=robot.userData.flipperMesh;
+  if(fg){
+    let t=0;
+    const anim=()=>{
+      t+=.1;
+      fg.rotation.x=-Math.PI/2.2*Math.sin(t);
+      if(t<Math.PI)requestAnimationFrame(anim);
+      else fg.rotation.x=0;
+    };
+    requestAnimationFrame(anim);
+  }
+  if(other&&robot.position.distanceTo(other.position)<3.2){
+    const force=15+w.damage*.8;
     const dir=other.position.clone().sub(robot.position).normalize();
-    const force=robot.userData.stats.damage*0.8;
-    other.userData.physBody.applyImpulse(
-      new CANNON.Vec3(dir.x*force,3,dir.z*force),
-      other.userData.physBody.position
-    );
-    applyDamage(other, robot.userData.stats.damage*0.3);
-    spawnImpactSparks(other.position);
+    other.userData.physBody.applyImpulse(new CANNON.Vec3(dir.x*force*.5,force,dir.z*force*.5),other.userData.physBody.position);
+    applyDamage(other,w.damage*.6);
+    spawnImpactSparks(other.position.clone().lerp(robot.position,.4));
+    showDamageNumber(other,Math.round(w.damage*.6));
   }
 }
 
-function checkCollisions() {
-  if(!p1Robot||!p2Robot||!gameRunning) return;
-  const dist = p1Robot.position.distanceTo(p2Robot.position);
-  
-  if(dist < 2.2) {
-    // Collision damage based on relative velocity
-    const rv = p1Robot.userData.physBody.velocity;
-    const rv2 = p2Robot.userData.physBody.velocity;
-    const relSpd = Math.sqrt(
-      Math.pow(rv.x-rv2.x,2)+Math.pow(rv.z-rv2.z,2)
-    );
-    
-    if(relSpd > 2) {
-      const dmg = relSpd * 2;
-      // Spinner bonus damage
-      const p1HasSpinner = p1Robot.userData.stats.weapons.some(w=>w.type==='spinner'||w.type==='vspinner'||w.type==='drum');
-      const p2HasSpinner = p2Robot.userData.stats.weapons.some(w=>w.type==='spinner'||w.type==='vspinner'||w.type==='drum');
+function activateSpinner(robot,w){
+  robot.userData.spinnerMeshes.forEach(s=>{s.userData.spinBurst=25;});
+  const other=robot===p1Robot?p2Robot:p1Robot;
+  if(other&&robot.position.distanceTo(other.position)<2.8){
+    applyDamage(other,w.damage*.5);
+    spawnImpactSparks(robot.position.clone().lerp(other.position,.5));
+    showDamageNumber(other,Math.round(w.damage*.5));
+  }
+}
 
-      // Each robot takes damage proportional to the OTHER's speed (attacker deals, defender receives)
-      const p1spd = Math.sqrt(rv.x*rv.x+rv.z*rv.z);
-      const p2spd = Math.sqrt(rv2.x*rv2.x+rv2.z*rv2.z);
-      const totalSpd = p1spd+p2spd || 1;
-      applyDamage(p1Robot, dmg*(p2HasSpinner?2:1)*(p2spd/totalSpd));
-      applyDamage(p2Robot, dmg*(p1HasSpinner?2:1)*(p1spd/totalSpd));
-      spawnImpactSparks(p1Robot.position.clone().lerp(p2Robot.position,0.5));
+function activateDrum(robot,w){
+  robot.userData.spinnerMeshes.forEach(s=>{s.userData.spinBurst=20;s.userData.drumSpin=30;});
+  const other=robot===p1Robot?p2Robot:p1Robot;
+  if(other&&robot.position.distanceTo(other.position)<2.8){
+    const dir=other.position.clone().sub(robot.position).normalize();
+    other.userData.physBody.applyImpulse(new CANNON.Vec3(dir.x*10,8,dir.z*10),other.userData.physBody.position);
+    applyDamage(other,w.damage*.5);
+    spawnImpactSparks(robot.position.clone().lerp(other.position,.4));
+    showDamageNumber(other,Math.round(w.damage*.5));
+  }
+}
 
-      // Bounce apart
-      const sep = p1Robot.position.clone().sub(p2Robot.position).normalize();
-      const bForce=relSpd*8;
-      p1Robot.userData.physBody.applyImpulse(new CANNON.Vec3(sep.x*bForce,0,sep.z*bForce),p1Robot.userData.physBody.position);
-      p2Robot.userData.physBody.applyImpulse(new CANNON.Vec3(-sep.x*bForce,0,-sep.z*bForce),p2Robot.userData.physBody.position);
+function activateAxe(robot,other,w){
+  const ag=robot.userData.axeMesh;
+  if(ag){
+    let t=0;
+    const anim=()=>{
+      t+=.12;
+      ag.rotation.x=Math.sin(t)*Math.PI*.55;
+      if(t<Math.PI)requestAnimationFrame(anim);
+      else ag.rotation.x=0;
+    };
+    requestAnimationFrame(anim);
+  }
+  if(other&&robot.position.distanceTo(other.position)<2.8){
+    applyDamage(other,w.damage*.7);
+    other.userData.physBody.applyImpulse(new CANNON.Vec3(0,12,0),other.userData.physBody.position);
+    spawnImpactSparks(other.position.clone());
+    showDamageNumber(other,Math.round(w.damage*.7));
+  }
+}
+
+function activateClamp(robot,other,w){
+  const cl=robot.userData.clampL,cr=robot.userData.clampR;
+  if(cl&&cr){
+    let t=0;const openA=cl.rotation.y;
+    const anim=()=>{
+      t+=.1;cl.rotation.y=Math.sin(t)*.4;cr.rotation.y=-Math.sin(t)*.4;
+      if(t<Math.PI)requestAnimationFrame(anim);
+      else{cl.rotation.y=0;cr.rotation.y=0;}
+    };
+    requestAnimationFrame(anim);
+  }
+  if(other&&robot.position.distanceTo(other.position)<2.6){
+    applyDamage(other,w.damage*.65);
+    spawnImpactSparks(other.position.clone());
+    showDamageNumber(other,Math.round(w.damage*.65));
+  }
+}
+
+function genericAttack(robot,other,w){
+  if(other&&robot.position.distanceTo(other.position)<3.2){
+    const dir=other.position.clone().sub(robot.position).normalize();
+    other.userData.physBody.applyImpulse(new CANNON.Vec3(dir.x*10,4,dir.z*10),other.userData.physBody.position);
+    applyDamage(other,w.damage*.4);
+    spawnImpactSparks(other.position.clone());
+    showDamageNumber(other,Math.round(w.damage*.4));
+  }
+}
+
+// =====================================================
+// COLLISION — realistic, scaled for long fights
+// =====================================================
+function checkCollisions(){
+  if(!p1Robot||!p2Robot||!gameRunning)return;
+  const dist=p1Robot.position.distanceTo(p2Robot.position);
+  if(dist<2.4){
+    const v1=p1Robot.userData.physBody.velocity;
+    const v2=p2Robot.userData.physBody.velocity;
+    const relSpd=Math.sqrt((v1.x-v2.x)**2+(v1.z-v2.z)**2);
+    if(relSpd>1.5){
+      // Very moderate collision damage — 1/6th of old values
+      const baseDmg=relSpd*0.35;
+      const p1HasSpinner=p1Robot.userData.stats.weapons.some(w=>['spinner','vspinner','drum'].includes(w.type));
+      const p2HasSpinner=p2Robot.userData.stats.weapons.some(w=>['spinner','vspinner','drum'].includes(w.type));
+      const p1spd=Math.sqrt(v1.x**2+v1.z**2),p2spd=Math.sqrt(v2.x**2+v2.z**2);
+      const tot=p1spd+p2spd||1;
+      const d1=baseDmg*(p2HasSpinner?1.6:1)*(p2spd/tot);
+      const d2=baseDmg*(p1HasSpinner?1.6:1)*(p1spd/tot);
+      if(d1>.5)applyDamage(p1Robot,d1);
+      if(d2>.5)applyDamage(p2Robot,d2);
+      if(relSpd>2.5){
+        spawnImpactSparks(p1Robot.position.clone().lerp(p2Robot.position,.5));
+        if(d1>1)showDamageNumber(p1Robot,Math.round(d1));
+        if(d2>1)showDamageNumber(p2Robot,Math.round(d2));
+      }
+      // Bounce
+      const sep=p1Robot.position.clone().sub(p2Robot.position).normalize();
+      const bf=relSpd*5;
+      p1Robot.userData.physBody.applyImpulse(new CANNON.Vec3(sep.x*bf,0,sep.z*bf),p1Robot.userData.physBody.position);
+      p2Robot.userData.physBody.applyImpulse(new CANNON.Vec3(-sep.x*bf,0,-sep.z*bf),p2Robot.userData.physBody.position);
     }
   }
 }
 
-function applyDamage(robot, amount) {
-  if(!gameRunning) return;
-  const armor = robot.userData.stats.armor || 50;
-  const actual = amount * (100/(100+armor));
+// Continuous spinner contact damage (much lower)
+let spinnerContactTimer=0;
+function updateSpinnerContact(dt){
+  spinnerContactTimer+=dt;
+  if(spinnerContactTimer<.25)return;
+  spinnerContactTimer=0;
+  [p1Robot,p2Robot].forEach(attacker=>{
+    if(!attacker)return;
+    const hasSpinner=attacker.userData.stats.weapons.some(w=>['spinner','vspinner','drum'].includes(w.type));
+    if(!hasSpinner)return;
+    const other=attacker===p1Robot?p2Robot:p1Robot;
+    if(!other)return;
+    const dist=attacker.position.distanceTo(other.position);
+    if(dist<2.5){
+      const spinW=attacker.userData.stats.weapons.find(w=>['spinner','vspinner','drum'].includes(w.type));
+      if(spinW){
+        const dmg=spinW.damage*.08; // per 0.25s = ~0.32*dmg per second
+        applyDamage(other,dmg);
+      }
+    }
+  });
+}
 
-  if(robot.userData.isPlayer) {
-    p1hp = Math.max(0, p1hp-actual);
-    // Flash screen
-    const fl=document.getElementById('dmgFlash');
-    fl.classList.add('show');
-    setTimeout(()=>fl.classList.remove('show'),80);
+function applyDamage(robot,amount){
+  if(!gameRunning)return;
+  const armor=robot.userData.stats.armor||45;
+  // Armour acts as percentage reduction
+  const reduction=armor/(armor+100);
+  const actual=amount*(1-reduction*.8);
+
+  if(robot.userData.isPlayer){
+    p1hp=Math.max(0,p1hp-actual);
+    document.getElementById('dmgFlash').classList.add('show');
+    setTimeout(()=>document.getElementById('dmgFlash').classList.remove('show'),60);
   } else {
-    p2hp = Math.max(0, p2hp-actual);
+    p2hp=Math.max(0,p2hp-actual);
   }
   updateHpBars();
-
-  if(p1hp<=0) endGame('p2');
-  else if(p2hp<=0) endGame('p1');
+  if(p1hp<=0)endGame('p2');
+  else if(p2hp<=0)endGame('p1');
 }
 
-function updateHpBars() {
-  const p1Max=p1Robot?p1Robot.userData.stats.hp:100;
-  const p2Max=p2Robot?p2Robot.userData.stats.hp:100;
-  const p1pct=(p1hp/p1Max)*100;
-  const p2pct=(p2hp/p2Max)*100;
+// =====================================================
+// AI — smarter, varied behaviour
+// =====================================================
+function updateAI(dt){
+  if(!p2Robot||!p1Robot||!gameRunning)return;
+  const b=p2Robot.userData.physBody;
+  const stats=p2Robot.userData.stats;
+  aiState.timer+=dt;
 
-  const bar1=document.getElementById('p1hp');
-  const bar2=document.getElementById('p2hp');
-  bar1.style.width=p1pct+'%';
-  bar2.style.width=p2pct+'%';
+  const toPlayer=p1Robot.position.clone().sub(p2Robot.position);
+  const dist=toPlayer.length();
+  const targetAngle=Math.atan2(toPlayer.x,toPlayer.z);
+  const curAngle=getYaw(b.quaternion);
+  const angleDiff=normalizeAngle(targetAngle-curAngle);
+  const sm=(stats.speed||60)/60;
+  const topSpeed=6.5*sm, topTurn=2.6*sm;
 
-  bar1.className='hud-hp-fill'+(p1pct<30?' critical':p1pct<60?' warn':'');
-  bar2.className='hud-hp-fill'+(p2pct<30?' critical':p2pct<60?' warn':'');
+  b.wakeUp();
 
+  switch(aiState.phase){
+    case 'approach':
+      b.angularVelocity.y=Math.sign(angleDiff)*Math.min(Math.abs(angleDiff)*3.5,topTurn);
+      if(Math.abs(angleDiff)<.55&&dist>2.2){
+        b.velocity.x=Math.sin(curAngle)*topSpeed;
+        b.velocity.z=Math.cos(curAngle)*topSpeed;
+      } else {b.velocity.x*=.78;b.velocity.z*=.78;}
+      if(dist<=2.5){aiState.phase='attack';aiState.timer=0;}
+      if(aiState.timer>3.5){aiState.phase='strafe';aiState.timer=0;aiState.strafeDir=Math.random()<.5?1:-1;}
+      break;
+
+    case 'attack':
+      b.velocity.x*=.7;b.velocity.z*=.7;
+      b.angularVelocity.y=Math.sign(angleDiff)*topTurn;
+      if(aiState.timer>.35){
+        fireWeapon(p2Robot,0);
+        if(aiState.timer>.6)fireWeapon(p2Robot,1);
+        aiState.phase=Math.random()<.4?'retreat':'approach';aiState.timer=0;
+      }
+      break;
+
+    case 'strafe': {
+      const strafeAngle=targetAngle+Math.PI/2*aiState.strafeDir;
+      b.velocity.x=Math.sin(strafeAngle)*topSpeed*.8;
+      b.velocity.z=Math.cos(strafeAngle)*topSpeed*.8;
+      b.angularVelocity.y=Math.sign(angleDiff)*topTurn;
+      if(dist<2.8&&Math.random()<.03)fireWeapon(p2Robot,0);
+      if(aiState.timer>1.8){aiState.phase='approach';aiState.timer=0;}
+      break;
+    }
+
+    case 'retreat': {
+      const awayAngle=targetAngle+Math.PI;
+      b.velocity.x=Math.sin(awayAngle)*topSpeed*.7;
+      b.velocity.z=Math.cos(awayAngle)*topSpeed*.7;
+      b.angularVelocity.y=Math.sign(angleDiff)*topTurn;
+      if(aiState.timer>1.2){aiState.phase='approach';aiState.timer=0;}
+      break;
+    }
+  }
+  b.angularVelocity.y*=.82;
+}
+
+function normalizeAngle(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;}
+function getYaw(q){return Math.atan2(2*(q.w*q.y+q.x*q.z),1-2*(q.y*q.y+q.z*q.z));}
+
+// =====================================================
+// PARTICLES
+// =====================================================
+function spawnImpactSparks(worldPos){
+  const v=worldPos.clone().project(camera);
+  const sx=(v.x*.5+.5)*window.innerWidth,sy=(-v.y*.5+.5)*window.innerHeight;
+  // Spark trails
+  for(let i=0;i<30;i++){
+    const a=Math.random()*Math.PI*2,sp=4+Math.random()*10;
+    sparks.push({x:sx,y:sy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,life:1,maxLife:.5+Math.random()*.4,r:255,g:100+Math.floor(Math.random()*155),b:0,size:1.5+Math.random()*2.5,type:'spark'});
+  }
+  // Metal chunks
+  for(let i=0;i<7;i++){
+    sparks.push({x:sx,y:sy,vx:(Math.random()-.5)*15,vy:-Math.random()*12-3,life:1,maxLife:.7+Math.random()*.5,r:140+Math.floor(Math.random()*80),g:140+Math.floor(Math.random()*80),b:140+Math.floor(Math.random()*80),size:3+Math.random()*5,type:'chunk',gravity:.5});
+  }
+  // White flash
+  sparks.push({x:sx,y:sy,vx:0,vy:0,life:1,maxLife:.12,r:255,g:255,b:255,size:30,type:'flash'});
+}
+
+function spawnSmoke(worldPos){
+  const v=worldPos.clone().project(camera);
+  const sx=(v.x*.5+.5)*window.innerWidth,sy=(-v.y*.5+.5)*window.innerHeight;
+  sparks.push({x:sx,y:sy,vx:(Math.random()-.5)*1.5,vy:-Math.random()*2-1,life:1,maxLife:1.5+Math.random(),r:80,g:80,b:80,size:8+Math.random()*8,type:'smoke'});
+}
+
+function spawnFlameEffect(wx,wz){
+  const v=new THREE.Vector3(wx,.5,wz).project(camera);
+  const sx=(v.x*.5+.5)*window.innerWidth,sy=(-v.y*.5+.5)*window.innerHeight;
+  for(let i=0;i<12;i++){
+    sparks.push({x:sx+(Math.random()-.5)*20,y:sy,vx:(Math.random()-.5)*3,vy:-Math.random()*10-5,life:1,maxLife:.6+Math.random()*.3,r:255,g:Math.floor(Math.random()*200),b:0,size:5+Math.random()*6,type:'flame'});
+  }
+}
+
+function updateSparks(dt){
+  const ctx=sparksCtx;if(!ctx)return;
+  ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+  for(let i=sparks.length-1;i>=0;i--){
+    const s=sparks[i];
+    s.x+=s.vx;s.y+=s.vy;
+    if(s.gravity)s.vy+=s.gravity;
+    s.vx*=.94;s.vy*=.94;
+    s.life-=dt/s.maxLife;
+    if(s.life<=0){sparks.splice(i,1);continue;}
+    const a=s.life;
+    ctx.globalAlpha=a;
+    if(s.type==='flash'){ctx.fillStyle=`rgba(255,255,255,${a*.8})`;ctx.beginPath();ctx.arc(s.x,s.y,s.size*s.life,0,Math.PI*2);ctx.fill();}
+    else if(s.type==='spark'){ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x-s.vx*4,s.y-s.vy*4);ctx.strokeStyle=`rgb(${s.r},${s.g},${s.b})`;ctx.lineWidth=s.size*.6;ctx.stroke();}
+    else if(s.type==='flame'){ctx.fillStyle=`rgba(${s.r},${s.g},${s.b},${a*.7})`;ctx.beginPath();ctx.arc(s.x,s.y,s.size*(2-s.life),0,Math.PI*2);ctx.fill();}
+    else if(s.type==='smoke'){ctx.fillStyle=`rgba(${s.r},${s.g},${s.b},${a*.25})`;ctx.beginPath();ctx.arc(s.x,s.y,s.size*(1+1-s.life),0,Math.PI*2);ctx.fill();}
+    else{ctx.fillStyle=`rgb(${s.r},${s.g},${s.b})`;ctx.fillRect(s.x-s.size/2,s.y-s.size/2,s.size,s.size);}
+  }
+  ctx.globalAlpha=1;
+}
+
+function showDamageNumber(robot,amount){
+  if(amount<1)return;
+  const v=robot.position.clone();v.y+=1;v.project(camera);
+  const sx=(v.x*.5+.5)*window.innerWidth+(Math.random()-.5)*40;
+  const sy=(-v.y*.5+.5)*window.innerHeight;
+  const el=document.createElement('div');
+  el.className='dmg-popup';
+  el.textContent=amount;
+  const isPlayer=robot.userData.isPlayer;
+  el.style.cssText=`left:${sx}px;top:${sy}px;color:${isPlayer?'#ff4444':'#ff8800'};text-shadow:0 0 8px currentColor;`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1200);
+}
+
+// =====================================================
+// HUD
+// =====================================================
+function updateHpBars(){
+  const p1Max=p1Robot?p1Robot.userData.stats.hp:300;
+  const p2Max=p2Robot?p2Robot.userData.stats.hp:300;
+  const p1pct=(p1hp/p1Max)*100,p2pct=(p2hp/p2Max)*100;
+  const b1=document.getElementById('p1hp'),b2=document.getElementById('p2hp');
+  b1.style.width=p1pct+'%';b2.style.width=p2pct+'%';
+  b1.className='hud-hp-fill'+(p1pct<30?' critical':p1pct<60?' warn':'');
+  b2.className='hud-hp-fill'+(p2pct<30?' critical':p2pct<60?' warn':'');
   document.getElementById('p1hpval').textContent=Math.ceil(p1hp);
   document.getElementById('p2hpval').textContent=Math.ceil(p2hp);
   document.getElementById('p1armval').textContent=p1armor;
   document.getElementById('p2armval').textContent=p2armor;
 }
 
-function updateWeaponCooldownUI() {
-  // Could add cooldown bars per weapon - simplified here
+function updateWeaponCooldownBars(){
+  const now=Date.now();
+  const stats=p1Robot?p1Robot.userData.stats:{weapons:[]};
+  stats.weapons.forEach((w,i)=>{
+    const bar=document.getElementById('wcd'+i);if(!bar)return;
+    const cdKey='p1'+i;
+    const cdEnd=weaponCDs[cdKey]||0;
+    const cd=w.cooldown||1500;
+    const remaining=Math.max(0,cdEnd-now);
+    const pct=(1-remaining/cd)*100;
+    bar.style.width=pct+'%';
+    bar.style.background=pct<100?'#ff4400':'#00ff88';
+  });
 }
 
-// =====================================================
-// AI SYSTEM
-// =====================================================
-function updateAI(dt) {
-  if(!p2Robot||!p1Robot||!gameRunning) return;
-  const b = p2Robot.userData.physBody;
-  const stats = p2Robot.userData.stats;
-
-  aiState.timer+=dt;
-
-  const toPlayer = p1Robot.position.clone().sub(p2Robot.position);
-  const dist = toPlayer.length();
-  const targetAngle = Math.atan2(toPlayer.x, toPlayer.z);
-  const currentAngle = getYaw(b.quaternion);
-  const angleDiff = normalizeAngle(targetAngle - currentAngle);
-  const speedMult = (stats.speed||60) / 60;
-  const topSpeed = 7 * speedMult;
-  const topTurn  = 3 * speedMult;
-
-  b.wakeUp();
-
-  if(aiState.phase==='approach') {
-    // Turn to face player
-    b.angularVelocity.y = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff)*4, topTurn);
-    // Drive forward when roughly facing player
-    if(Math.abs(angleDiff) < 0.5 && dist > 2.0) {
-      b.velocity.x = Math.sin(currentAngle) * topSpeed;
-      b.velocity.z = Math.cos(currentAngle) * topSpeed;
-    } else if(dist <= 2.0) {
-      aiState.phase='attack'; aiState.timer=0;
-    }
-    if(aiState.timer>4) { aiState.phase='strafe'; aiState.timer=0; }
-    // Damping when not driving
-    if(Math.abs(angleDiff) >= 0.5 || dist <= 2.0) {
-      b.velocity.x*=0.8; b.velocity.z*=0.8;
-    }
-  } else if(aiState.phase==='attack') {
-    b.velocity.x*=0.7; b.velocity.z*=0.7;
-    if(aiState.timer>0.4) {
-      fireWeapon(p2Robot,'primary');
-      fireWeapon(p2Robot,'spinner');
-      aiState.timer=0; aiState.phase='approach';
-    }
-  } else if(aiState.phase==='strafe') {
-    const strafeAngle = targetAngle + Math.PI/2;
-    b.velocity.x = Math.sin(strafeAngle) * topSpeed * 0.7;
-    b.velocity.z = Math.cos(strafeAngle) * topSpeed * 0.7;
-    b.angularVelocity.y = Math.sign(angleDiff) * topTurn;
-    if(aiState.timer>1.5) { aiState.phase='approach'; aiState.timer=0; }
-  }
-
-  b.angularVelocity.y *= 0.8;
-
-  // Fire weapons when close
-  if(dist < 3 && Math.random() < 0.02) fireWeapon(p2Robot,'flipper');
-}
-
-function normalizeAngle(a) {
-  while(a>Math.PI) a-=Math.PI*2;
-  while(a<-Math.PI) a+=Math.PI*2;
-  return a;
-}
-
-// =====================================================
-// SPARKS PARTICLE SYSTEM
-// =====================================================
-function spawnImpactSparks(worldPos) {
-  // Convert world pos to screen
-  const v = worldPos.clone().project(camera);
-  const sx = (v.x*0.5+0.5)*window.innerWidth;
-  const sy = (-v.y*0.5+0.5)*window.innerHeight;
-
-  for(let i=0;i<25;i++) {
-    const angle=Math.random()*Math.PI*2;
-    const speed=3+Math.random()*8;
-    sparks.push({
-      x:sx, y:sy,
-      vx:Math.cos(angle)*speed,
-      vy:Math.sin(angle)*speed-3,
-      life:1, maxLife:0.6+Math.random()*0.4,
-      r:255, g:100+Math.random()*155, b:0,
-      size:2+Math.random()*3,
-      type:'spark'
-    });
-  }
-  // Metal chunks
-  for(let i=0;i<5;i++) {
-    sparks.push({
-      x:sx, y:sy,
-      vx:(Math.random()-0.5)*12,
-      vy:-Math.random()*10-2,
-      life:1, maxLife:0.8+Math.random()*0.5,
-      r:150+Math.random()*100,g:150+Math.random()*100,b:150+Math.random()*100,
-      size:3+Math.random()*4,
-      type:'chunk',
-      gravity:0.4
-    });
-  }
-}
-
-function updateSparks(dt) {
-  const ctx=sparksCtx;
-  if(!ctx) return;
-  ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
-
-  for(let i=sparks.length-1;i>=0;i--) {
-    const s=sparks[i];
-    s.x+=s.vx; s.y+=s.vy;
-    if(s.gravity) s.vy+=s.gravity;
-    s.vx*=0.96; s.vy*=0.96;
-    s.life-=dt/s.maxLife;
-
-    if(s.life<=0){sparks.splice(i,1);continue;}
-
-    const a=s.life;
-    ctx.globalAlpha=a;
-
-    if(s.type==='spark') {
-      ctx.beginPath();
-      ctx.moveTo(s.x,s.y);
-      ctx.lineTo(s.x-s.vx*3,s.y-s.vy*3);
-      ctx.strokeStyle=`rgb(${s.r},${s.g},${s.b})`;
-      ctx.lineWidth=s.size*0.5;
-      ctx.stroke();
-    } else if(s.type==='flame') {
-      ctx.fillStyle=`rgba(${s.r},${s.g},${s.b},${a})`;
-      ctx.beginPath();
-      ctx.arc(s.x,s.y,s.size*(2-s.life),0,Math.PI*2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle=`rgb(${s.r},${s.g},${s.b})`;
-      ctx.fillRect(s.x-s.size/2,s.y-s.size/2,s.size,s.size);
-    }
-  }
-  ctx.globalAlpha=1;
-}
-
-// =====================================================
-// MINIMAP
-// =====================================================
-function updateMinimap() {
+function updateMinimap(){
   const canvas=document.getElementById('minimapCanvas');
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='rgba(0,0,0,0.85)';
-  ctx.fillRect(0,0,120,120);
-
-  // Arena bounds
-  ctx.strokeStyle='#1a3050';
-  ctx.strokeRect(4,4,112,112);
-
-  // Hazard markers
+  ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,120,120);
+  ctx.strokeStyle='#1a3050';ctx.strokeRect(4,4,112,112);
   hazardMeshes.forEach(h=>{
-    const mx=(h.x+ARENA_W/2)/ARENA_W*112+4;
-    const mz=(h.z+ARENA_H/2)/ARENA_H*112+4;
-    ctx.fillStyle=h.type==='flame'?'#ff660088':'#ff220044';
-    ctx.beginPath(); ctx.arc(mx,mz,4,0,Math.PI*2); ctx.fill();
+    const mx=(h.x+ARENA_W/2)/ARENA_W*112+4,mz=(h.z+ARENA_H/2)/ARENA_H*112+4;
+    ctx.fillStyle=h.type==='flame'?'#ff660066':'#ffaa0044';
+    ctx.beginPath();ctx.arc(mx,mz,4,0,Math.PI*2);ctx.fill();
   });
-
-  if(p1Robot) {
-    const mx=(p1Robot.position.x+ARENA_W/2)/ARENA_W*112+4;
-    const mz=(p1Robot.position.z+ARENA_H/2)/ARENA_H*112+4;
-    ctx.fillStyle=botColor1;
-    ctx.beginPath(); ctx.arc(mx,mz,5,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.beginPath(); ctx.arc(mx,mz,3,0,Math.PI*2); ctx.fill();
+  if(p1Robot){
+    const mx=(p1Robot.position.x+ARENA_W/2)/ARENA_W*112+4,mz=(p1Robot.position.z+ARENA_H/2)/ARENA_H*112+4;
+    ctx.fillStyle=botColor1;ctx.beginPath();ctx.arc(mx,mz,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(mx,mz,3,0,Math.PI*2);ctx.fill();
+    // Direction arrow
+    const a=p1Robot.rotation.y;
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(mx,mz);ctx.lineTo(mx+Math.sin(a)*9,mz+Math.cos(a)*9);ctx.stroke();
   }
-  if(p2Robot) {
-    const mx=(p2Robot.position.x+ARENA_W/2)/ARENA_W*112+4;
-    const mz=(p2Robot.position.z+ARENA_H/2)/ARENA_H*112+4;
-    ctx.fillStyle='#ff4400';
-    ctx.beginPath(); ctx.arc(mx,mz,5,0,Math.PI*2); ctx.fill();
+  if(p2Robot){
+    const mx=(p2Robot.position.x+ARENA_W/2)/ARENA_W*112+4,mz=(p2Robot.position.z+ARENA_H/2)/ARENA_H*112+4;
+    ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(mx,mz,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(mx,mz,2,0,Math.PI*2);ctx.fill();
   }
 }
 
 // =====================================================
 // TIMER
 // =====================================================
-function startTimer() {
-  gameTime=180;
-  updateTimerDisplay();
+function startTimer(){
+  gameTime=180;updateTimerDisplay();
   gameTimerInterval=setInterval(()=>{
-    if(!gameRunning) return;
-    gameTime--;
-    updateTimerDisplay();
-    if(gameTime<=0) {
-      // Judge by HP
-      if(p1hp>p2hp) endGame('p1');
-      else if(p2hp>p1hp) endGame('p2');
+    if(!gameRunning)return;
+    gameTime--;updateTimerDisplay();
+    if(gameTime<=0){
+      if(p1hp>p2hp)endGame('p1');
+      else if(p2hp>p1hp)endGame('p2');
       else endGame('draw');
     }
   },1000);
 }
 
-function updateTimerDisplay() {
-  const m=Math.floor(gameTime/60);
-  const s=gameTime%60;
+function updateTimerDisplay(){
+  const m=Math.floor(gameTime/60),s=gameTime%60;
   document.getElementById('hud-timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
-  if(gameTime<=30) document.getElementById('hud-timer').style.color='#ff4400';
-  else if(gameTime<=60) document.getElementById('hud-timer').style.color='#ff8800';
-  else document.getElementById('hud-timer').style.color='#fff';
+  document.getElementById('hud-timer').style.color=gameTime<=30?'#ff4400':gameTime<=60?'#ff8800':'#fff';
 }
 
-function showHudMsg(msg, duration=2000) {
-  const el=document.getElementById('hud-msg');
-  el.textContent=msg;
-  el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),duration);
+function showHudMsg(msg,dur=2000){
+  const el=document.getElementById('hud-msg');el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
 }
 
-function endGame(winner) {
-  if(!gameRunning) return;
-  gameRunning=false;
-  clearInterval(gameTimerInterval);
-
-  const rs=document.getElementById('resultScreen');
-  const rt=document.getElementById('resultTitle');
-  const rsub=document.getElementById('resultSub');
-
-  if(winner==='p1') {
-    rt.textContent=botName.toUpperCase()+' WINS!';
-    rt.style.textShadow='0 0 40px #00ff88';
-    rsub.textContent='KNOCKOUT';
-  } else if(winner==='p2') {
-    rt.textContent='DEFEATED!';
-    rt.style.textShadow='0 0 40px #ff2020';
-    rsub.textContent='OPPONENT WINS';
-  } else {
-    rt.textContent='DRAW!';
-    rt.style.textShadow='0 0 40px #ff8800';
-    rsub.textContent='TIME OUT - JUDGES DECISION';
-  }
-
+function endGame(winner){
+  if(!gameRunning)return;
+  gameRunning=false;clearInterval(gameTimerInterval);
+  const rs=document.getElementById('resultScreen'),rt=document.getElementById('resultTitle'),rsub=document.getElementById('resultSub');
+  if(winner==='p1'){rt.textContent=botName.toUpperCase()+' WINS!';rt.style.textShadow='0 0 40px #00ff88';rsub.textContent='KNOCKOUT';}
+  else if(winner==='p2'){rt.textContent='DEFEATED!';rt.style.textShadow='0 0 40px #ff2020';rsub.textContent='OPPONENT WINS';}
+  else{rt.textContent='DRAW!';rt.style.textShadow='0 0 40px #ff8800';rsub.textContent='JUDGES DECISION';}
   rs.style.display='flex';
 }
 
-function restartFight() {
+function restartFight(){
   document.getElementById('resultScreen').style.display='none';
-  cleanup();
-  if(aiMode) startVsAI();
-  else if(onlineMode) startVsAI(); // simplified
+  cleanup();if(aiMode)startVsAI();
 }
 
-function cleanup() {
-  gameRunning=false;
-  clearInterval(gameTimerInterval);
-  if(frameId) cancelAnimationFrame(frameId);
+function cleanup(){
+  gameRunning=false;clearInterval(gameTimerInterval);
+  if(frameId)cancelAnimationFrame(frameId);
   document.removeEventListener('keydown',onKeyDown);
   document.removeEventListener('keyup',onKeyUp);
-  keys={};
-  weaponCDs={};
-  sparks=[];
-  hazardMeshes=[];
-  if(renderer) renderer.dispose();
-  if(world) {
-    while(world.bodies.length>0) world.remove(world.bodies[0]);
-  }
-  renderer=null; scene=null; camera=null; world=null;
-  p1Robot=null; p2Robot=null;
-  aiState={phase:'approach',timer:0};
+  keys={};weaponCDs={};sparks=[];hazardMeshes=[];
+  if(renderer)renderer.dispose();
+  if(world){while(world.bodies.length>0)world.remove(world.bodies[0]);}
+  renderer=null;scene=null;camera=null;world=null;p1Robot=null;p2Robot=null;
+  aiState={phase:'approach',timer:0,strafeDir:1};
 }
 
-function onResize() {
-  if(!renderer||!camera) return;
+function onResize(){
+  if(!renderer||!camera)return;
   camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
-  const sc=document.getElementById('sparksCanvas');
-  sc.width=window.innerWidth; sc.height=window.innerHeight;
+  const sc=document.getElementById('sparksCanvas');sc.width=window.innerWidth;sc.height=window.innerHeight;
 }
-
-// =====================================================
-// ONLINE (PeerJS)
-// =====================================================
-async function showOnlineMenu() {
-  document.getElementById('onlineModal').style.display='flex';
-  document.getElementById('ol-status').textContent='Loading PeerJS...';
-
-  // Load PeerJS dynamically
-  if(!window.Peer) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js');
-  }
-
-  peer = new Peer();
-  peer.on('open', id=>{
-    document.getElementById('myPeerId').textContent=id;
-    document.getElementById('ol-status').textContent='Ready. Share your ID with your opponent.';
-  });
-  peer.on('connection', c=>{
-    conn=c;
-    isHost=true;
-    setupConn(c);
-  });
-  peer.on('error', e=>{
-    document.getElementById('ol-status').textContent='Error: '+e.type;
-  });
-}
-
-function copyPeerId() {
-  const id=document.getElementById('myPeerId').textContent;
-  navigator.clipboard.writeText(id).then(()=>{
-    document.getElementById('ol-status').textContent='ID copied!';
-  });
-}
-
-function connectToPeer() {
-  const oppId=document.getElementById('oppIdInp').value.trim();
-  if(!oppId){document.getElementById('ol-status').textContent='Enter opponent ID';return;}
-  document.getElementById('ol-status').textContent='Connecting...';
-  conn=peer.connect(oppId,{reliable:false});
-  isHost=false;
-  setupConn(conn);
-}
-
-function setupConn(c) {
-  c.on('open',()=>{
-    document.getElementById('ol-status').textContent='Connected! Starting fight...';
-    closeOnlineModal();
-    onlineMode=true;
-    aiMode=false;
-    setTimeout(()=>{
-      // Share build
-      c.send(JSON.stringify({type:'build',parts:placedParts,color1:botColor1,color2:botColor2,name:botName}));
-      initGame();
-    },500);
-  });
-  c.on('data',d=>{
-    try{
-      const msg=JSON.parse(d);
-      handleOnlineMsg(msg);
-    }catch(e){}
-  });
-  c.on('close',()=>{ document.getElementById('ol-status').textContent='Disconnected'; });
-}
-
-function handleOnlineMsg(msg) {
-  if(msg.type==='build') {
-    // Spawn remote robot
-    // (simplified - would set up p2Robot from remote data)
-  } else if(msg.type==='state') {
-    if(p2Robot&&p2Robot.userData.physBody) {
-      p2Robot.userData.physBody.position.set(msg.x,msg.y,msg.z);
-      p2Robot.userData.physBody.quaternion.set(msg.qx,msg.qy,msg.qz,msg.qw);
-      p2hp=msg.hp;
-      updateHpBars();
-    }
-  } else if(msg.type==='weapon') {
-    if(p2Robot) fireWeapon(p2Robot,'primary');
-  }
-}
-
-let syncCounter=0;
-function syncOnline() {
-  if(!conn||!p1Robot) return;
-  syncCounter++;
-  if(syncCounter%2!==0) return; // Send every other frame
-  const b=p1Robot.userData.physBody;
-  conn.send(JSON.stringify({
-    type:'state',
-    x:b.position.x,y:b.position.y,z:b.position.z,
-    qx:b.quaternion.x,qy:b.quaternion.y,qz:b.quaternion.z,qw:b.quaternion.w,
-    hp:p1hp
-  }));
-}
-
-function closeOnlineModal() {
-  document.getElementById('onlineModal').style.display='none';
-}
-
-function loadScript(src) {
-  return new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src=src; s.onload=res; s.onerror=rej;
-    document.head.appendChild(s);
-  });
-}
-
-function showFlash(color) {
-  const fl=document.getElementById('dmgFlash');
-  fl.style.background=`radial-gradient(ellipse at center, transparent 40%, ${color}44 100%)`;
-  fl.classList.add('show');
-  setTimeout(()=>fl.classList.remove('show'),200);
-}
-
-// ===== COUNTDOWN =====
-function showCountdown() {
-  return new Promise(async res=>{
-    for(const msg of ['3','2','1','FIGHT!']) {
-      showHudMsg(msg, 800);
-      await sleep(900);
-    }
-    res();
-  });
-}
-
-// Add countdown to game start
-const origInitGame = initGame;
-// initGame already sets gameRunning=true, let's add countdown logic inline
-// Actually, just show fight message
-setTimeout(()=>{
-  if(gameRunning) showHudMsg('FIGHT!',1500);
-},500);
-
 </script>
 </body>
 </html>
